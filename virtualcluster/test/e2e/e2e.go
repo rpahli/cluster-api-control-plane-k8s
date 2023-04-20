@@ -19,12 +19,9 @@ package e2e
 import (
 	"testing"
 
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
+	"github.com/onsi/ginkgo/v2/config"
 	"github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/klog/v2"
-
 	"sigs.k8s.io/cluster-api-provider-nested/virtualcluster/test/e2e/framework"
 	"sigs.k8s.io/cluster-api-provider-nested/virtualcluster/test/e2e/framework/ginkgowrapper"
 )

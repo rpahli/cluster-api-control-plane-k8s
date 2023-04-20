@@ -38,7 +38,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrlcli "sigs.k8s.io/controller-runtime/pkg/client"
 
-	controlplanev1 "sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/api/v1alpha4"
+	controlplanev1 "sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/api/v1beta1"
 	"sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/kubeadm"
 	addonv1alpha1 "sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/addon/pkg/apis/v1alpha1"
 )
@@ -51,19 +51,19 @@ import (
 func createNestedComponentSts(ctx context.Context,
 	cli ctrlcli.Client, ncMeta metav1.ObjectMeta,
 	ncSpec controlplanev1.NestedComponentSpec,
-	ncKind, clusterName string, log logr.Logger) error {
+	ncKind controlplanev1.ComponentKind, kubeAdmKind, clusterName string, log logr.Logger) error {
 	// setup the ownerReferences for all objects
 	or := metav1.NewControllerRef(&ncMeta,
-		controlplanev1.GroupVersion.WithKind(ncKind))
+		controlplanev1.GroupVersion.WithKind(string(ncKind)))
 
-	ncSts, err := genStatefulSetObject(cli, ncMeta, ncSpec, ncKind, clusterName, log)
+	ncSts, err := genStatefulSetObject(cli, ncMeta, ncSpec, ncKind, kubeAdmKind, clusterName, log)
 	if err != nil {
 		return errors.Errorf("fail to generate the Statefulset object: %v", err)
 	}
 
-	if ncKind != kubeadm.ControllerManager {
+	if kubeAdmKind != kubeadm.ControllerManager {
 		// no need to create the service for the NestedControllerManager
-		ncSvc, err := genServiceObject(ncKind, clusterName, ncMeta.GetName(), ncMeta.GetNamespace())
+		ncSvc, err := genServiceObject(kubeAdmKind, clusterName, ncMeta.GetName(), ncMeta.GetNamespace())
 		if err != nil {
 			return errors.Errorf("fail to generate the Service object: %v", err)
 		}
@@ -185,7 +185,9 @@ func genStatefulSetObject(
 	cli ctrlcli.Client,
 	ncMeta metav1.ObjectMeta,
 	ncSpec controlplanev1.NestedComponentSpec,
-	ncKind, clusterName string,
+	ncKind controlplanev1.ComponentKind,
+	kubeAdmKind,
+	clusterName string,
 	log logr.Logger) (*appsv1.StatefulSet, error) {
 	cm := corev1.ConfigMap{}
 	if err := cli.Get(context.TODO(), types.NamespacedName{
@@ -199,12 +201,12 @@ func genStatefulSetObject(
 	}
 
 	// 1. get the pod spec
-	podManifest := cm.Data[ncKind]
+	podManifest := cm.Data[kubeAdmKind]
 	if podManifest == "" {
 		return nil, errors.Errorf("data %s is not found", ncKind)
 	}
 	// 2. generate the statefulset manifest
-	ncSts, err := genStatefulSetManifest(podManifest, ncKind, clusterName, ncMeta.GetName(), ncMeta.GetNamespace())
+	ncSts, err := genStatefulSetManifest(podManifest, kubeAdmKind, clusterName, ncMeta.GetName(), ncMeta.GetNamespace())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate the statefulset manifest")
 	}
@@ -345,6 +347,8 @@ func completeTemplates(templates map[string]string, clusterName string) (map[str
 			ret[kubeadm.APIServer] = completeKASPodSpec(pod, clusterName)
 		case kubeadm.ControllerManager:
 			ret[kubeadm.ControllerManager] = completeKCMPodSpec(pod, clusterName)
+		case kubeadm.Scheduler:
+			ret[kubeadm.Scheduler] = completeKSPodSpec(pod, clusterName)
 		case kubeadm.Etcd:
 			ret[kubeadm.Etcd] = completeEtcdPodSpec(pod, clusterName)
 		default:
@@ -354,7 +358,13 @@ func completeTemplates(templates map[string]string, clusterName string) (map[str
 	return ret, nil
 }
 
-// completeKASPodSpec sets volumes, envs and other fields for the kube-apiserver pod spec.
+// completeKSPodSpec sets volumes, envs and other fields for the kube-scheduler pod spec.
+func completeKSPodSpec(pod corev1.Pod, clusterName string) corev1.Pod {
+	ps := pod.Spec
+	pod.Spec = ps
+	return pod
+}
+
 func completeKASPodSpec(pod corev1.Pod, clusterName string) corev1.Pod {
 	ps := pod.Spec
 	pod.Spec.DNSConfig = &corev1.PodDNSConfig{
@@ -418,9 +428,9 @@ func completeKASPodSpec(pod corev1.Pod, clusterName string) corev1.Pod {
 		Name:          "api",
 		ContainerPort: 6443,
 	})
-	ps.Containers[0].LivenessProbe.Handler.HTTPGet.Host = loopbackAddress
-	ps.Containers[0].ReadinessProbe.Handler.HTTPGet.Host = loopbackAddress
-	ps.Containers[0].StartupProbe.Handler.HTTPGet.Host = loopbackAddress
+	ps.Containers[0].LivenessProbe.HTTPGet.Host = loopbackAddress
+	ps.Containers[0].ReadinessProbe.HTTPGet.Host = loopbackAddress
+	ps.Containers[0].StartupProbe.HTTPGet.Host = loopbackAddress
 
 	// disable the hostnetwork
 	ps.HostNetwork = false

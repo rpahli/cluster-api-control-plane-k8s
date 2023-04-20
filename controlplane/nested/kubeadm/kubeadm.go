@@ -122,6 +122,7 @@ func GenerateTemplates(log logr.Logger, clusterName string) (map[string]string, 
 	// store manifests of different nested cluster in different directory
 	KASSubcommand = append(KASSubcommand, "--rootfs", "/"+clusterName)
 	KCMSubcommand = append(KCMSubcommand, "--rootfs", "/"+clusterName)
+	KSSubcommand = append(KSSubcommand, "--rootfs", "/"+clusterName)
 	EtcdSubcommand = append(EtcdSubcommand, "--rootfs", "/"+clusterName)
 	// generate the manifests
 	if err := execCommand(log, KubeadmExecPath, KASSubcommand...); err != nil {
@@ -129,6 +130,9 @@ func GenerateTemplates(log logr.Logger, clusterName string) (map[string]string, 
 	}
 	if err := execCommand(log, KubeadmExecPath, KCMSubcommand...); err != nil {
 		return nil, errors.Wrap(err, "fail to generate the controller-manager manifests")
+	}
+	if err := execCommand(log, KubeadmExecPath, KSSubcommand...); err != nil {
+		return nil, errors.Wrap(err, "fail to generate the scheduler manifests")
 	}
 	if err := execCommand(log, KubeadmExecPath, EtcdSubcommand...); err != nil {
 		return nil, errors.Wrap(err, "fail to generate the etcd manifests")
@@ -146,6 +150,11 @@ func GenerateTemplates(log logr.Logger, clusterName string) (map[string]string, 
 	if loadErr != nil {
 		return nil, errors.Wrap(loadErr, "fail to load the controller-manager manifests")
 	}
+	ksPath := filepath.Join("/", clusterName, KSManifestsPath)
+	KSManifests, loadErr := ioutil.ReadFile(filepath.Clean(ksPath))
+	if loadErr != nil {
+		return nil, errors.Wrap(loadErr, "fail to load the controller-manager manifests")
+	}
 	etcdPath := filepath.Join("/", clusterName, EtcdManifestsPath)
 	EtcdManifests, loadErr := ioutil.ReadFile(filepath.Clean(etcdPath))
 	if loadErr != nil {
@@ -156,6 +165,7 @@ func GenerateTemplates(log logr.Logger, clusterName string) (map[string]string, 
 		APIServer:         string(KASManifests),
 		ControllerManager: string(KCMManifests),
 		Etcd:              string(EtcdManifests),
+		Scheduler:         string(KSManifests),
 	}, nil
 }
 

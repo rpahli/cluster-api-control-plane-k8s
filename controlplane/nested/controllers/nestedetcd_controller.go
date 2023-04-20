@@ -28,13 +28,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	controlplanev1alpha4 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	controlplanev1alpha4 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/certs"
 	"sigs.k8s.io/cluster-api/util/secret"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	controlplanev1 "sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/api/v1alpha4"
+	controlplanev1 "sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/api/v1beta1"
 	"sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/certificate"
 	"sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/kubeadm"
 	"sigs.k8s.io/cluster-api/util"
@@ -115,6 +115,7 @@ func (r *NestedEtcdReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			if err := createNestedComponentSts(ctx,
 				r.Client, netcd.ObjectMeta,
 				netcd.Spec.NestedComponentSpec,
+				controlplanev1.Etcd,
 				kubeadm.Etcd, cluster.GetName(), log); err != nil {
 				log.Error(err, "fail to create NestedEtcd StatefulSet")
 				return ctrl.Result{}, err
@@ -170,7 +171,7 @@ func (r *NestedEtcdReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NestedEtcdReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(context.TODO(),
+	/*if err := mgr.GetFieldIndexer().IndexField(context.TODO(),
 		&appsv1.StatefulSet{},
 		statefulsetOwnerKeyNEtcd,
 		func(rawObj client.Object) []string {
@@ -191,7 +192,7 @@ func (r *NestedEtcdReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}); err != nil {
 		return err
 	}
-
+	*/
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&controlplanev1.NestedEtcd{}).
 		Owns(&appsv1.StatefulSet{}).

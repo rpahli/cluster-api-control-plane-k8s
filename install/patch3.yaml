@@ -1,0 +1,14 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capi-kubeadm-control-plane-controller-manager
+  namespace: capi-kubeadm-control-plane-system
+spec:
+  template:
+    spec:
+      containers:
+        - args:
+            - --leader-elect
+            - --metrics-bind-addr=localhost:8080
+            - --feature-gates=ClusterTopology=false,KubeadmBootstrapFormatIgnition=false
+          name: manager

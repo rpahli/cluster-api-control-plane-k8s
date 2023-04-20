@@ -1,4 +1,4 @@
-apiVersion: controlplane.cluster.x-k8s.io/v1alpha4
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: NestedEtcd
 metadata:
   name: nestedetcd-sample

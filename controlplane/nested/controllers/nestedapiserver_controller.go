@@ -32,10 +32,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	controlplanev1 "sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/api/v1alpha4"
+	controlplanev1 "sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/api/v1beta1"
 	"sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/certificate"
 	"sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/kubeadm"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // NestedAPIServerReconciler reconciles a NestedAPIServer object.
@@ -113,6 +113,7 @@ func (r *NestedAPIServerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			// the statefulset is not found, create one.
 			if err := createNestedComponentSts(ctx,
 				r.Client, nkas.ObjectMeta, nkas.Spec.NestedComponentSpec,
+				controlplanev1.APIServer,
 				kubeadm.APIServer, cluster.GetName(), log); err != nil {
 				log.Error(err, "fail to create NestedAPIServer StatefulSet")
 				return ctrl.Result{}, err
@@ -166,7 +167,7 @@ func (r *NestedAPIServerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NestedAPIServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(context.TODO(),
+	/*if err := mgr.GetFieldIndexer().IndexField(context.TODO(),
 		&appsv1.StatefulSet{},
 		statefulsetOwnerKeyNKas,
 		func(rawObj client.Object) []string {
@@ -186,7 +187,7 @@ func (r *NestedAPIServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return []string{owner.Name}
 		}); err != nil {
 		return err
-	}
+	}*/
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&controlplanev1.NestedAPIServer{}).
 		Owns(&appsv1.StatefulSet{}).

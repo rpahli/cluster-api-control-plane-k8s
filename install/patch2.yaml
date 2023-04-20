@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capi-kubeadm-bootstrap-controller-manager
+  namespace: capi-kubeadm-bootstrap-system
+spec:
+  template:
+    spec:
+      containers:
+        - args:
+            - --leader-elect
+            - --metrics-bind-addr=localhost:8080
+            - --feature-gates=MachinePool=false,KubeadmBootstrapFormatIgnition=false
+            - --bootstrap-token-ttl=15m
+          name: manager

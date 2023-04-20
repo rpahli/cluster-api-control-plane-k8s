@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha4
+package v1beta1
 
 import (
 	"context"
@@ -99,6 +99,7 @@ type NestedControlPlaneStatusAPIServer struct {
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 //+kubebuilder:subresource:status
 // +k8s:defaulter-gen=true
+// +kubebuilder:storageversion
 
 // NestedControlPlane is the Schema for the nestedcontrolplanes API.
 type NestedControlPlane struct {

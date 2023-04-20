@@ -1,0 +1,8 @@
+resources:
+  - https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.yaml
+  - https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.3.5/cluster-api-components.yaml
+
+patchesStrategicMerge:
+  - patch2.yaml
+  - patch3.yaml
+  - patch-1.yaml

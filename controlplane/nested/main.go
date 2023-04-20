@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,14 +28,14 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/klog/v2/klogr"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/feature"
 	"sigs.k8s.io/cluster-api/version"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	infrastructurev1alpha4 "sigs.k8s.io/cluster-api-provider-nested/api/v1alpha4"
-	controlplanev1alpha4 "sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/api/v1alpha4"
+	infrastructurev1beta1 "sigs.k8s.io/cluster-api-provider-nested/api/v1beta1"
+	controlplanev1beta1 "sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/api/v1beta1"
 	"sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/controllers"
 	// +kubebuilder:scaffold:imports
 )
@@ -59,8 +59,10 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
-	utilruntime.Must(controlplanev1alpha4.AddToScheme(scheme))
-	utilruntime.Must(infrastructurev1alpha4.AddToScheme(scheme))
+	// utilruntime.Must(controlplanev1alpha4.AddToScheme(scheme))
+	utilruntime.Must(controlplanev1beta1.AddToScheme(scheme))
+	// utilruntime.Must(infrastructurev1alpha4.AddToScheme(scheme))
+	utilruntime.Must(infrastructurev1beta1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

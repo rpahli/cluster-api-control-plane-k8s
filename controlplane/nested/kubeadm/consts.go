@@ -23,6 +23,8 @@ const (
 	KASManifestsPath = "/etc/kubernetes/manifests/kube-apiserver.yaml"
 	// KCMManifestsPath denotes the Path to the controller-manager static pod manifest.
 	KCMManifestsPath = "/etc/kubernetes/manifests/kube-controller-manager.yaml"
+	// KSManifestsPath denotes the Path to the controller-manager static pod manifest.
+	KSManifestsPath = "/etc/kubernetes/manifests/kube-scheduler.yaml"
 	// EtcdManifestsPath denotes the Path to the etcd static pod manifest.
 	EtcdManifestsPath = "/etc/kubernetes/manifests/etcd.yaml"
 	// DefaultKubeadmConfigPath denotes the Path to the default kubeadm config.
@@ -34,6 +36,8 @@ const (
 	APIServer = "apiserver"
 	// ControllerManager denotes the name of the controller-manager.
 	ControllerManager = "controller-manager"
+	// Scheduler denotes the name of the scheduler.
+	Scheduler = "scheduler"
 	// Etcd denotes the name of the etcd.
 	Etcd = "etcd"
 )
@@ -43,6 +47,8 @@ var (
 	KASSubcommand = []string{"init", "phase", "control-plane", "apiserver", "--config", DefaultKubeadmConfigPath}
 	// KCMSubcommand is the command that generates the controller-manager manifest.
 	KCMSubcommand = []string{"init", "phase", "control-plane", "controller-manager", "--config", DefaultKubeadmConfigPath}
+	// KSSubcommand is the command that generates the controller-manager manifest.
+	KSSubcommand = []string{"init", "phase", "control-plane", "scheduler", "--config", DefaultKubeadmConfigPath}
 	// EtcdSubcommand is the command that generates the etcd manifest.
 	EtcdSubcommand = []string{"init", "phase", "etcd", "local", "--config", DefaultKubeadmConfigPath}
 )
