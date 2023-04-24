@@ -269,7 +269,7 @@ func getOwner(ncMeta metav1.ObjectMeta) metav1.OwnerReference {
 	}
 	for _, owner := range owners {
 		if owner.APIVersion == controlplanev1.GroupVersion.String() &&
-			owner.Kind == "NestedControlPlane" {
+			owner.Kind == "K8sControlPlane" {
 			return owner
 		}
 	}

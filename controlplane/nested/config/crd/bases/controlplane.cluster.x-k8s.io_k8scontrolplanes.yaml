@@ -5,19 +5,19 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
-  name: nestedcontrolplanes.controlplane.cluster.x-k8s.io
+  name: k8scontrolplanes.controlplane.cluster.x-k8s.io
 spec:
   group: controlplane.cluster.x-k8s.io
   names:
     categories:
     - capi
     - capn
-    kind: NestedControlPlane
-    listKind: NestedControlPlaneList
-    plural: nestedcontrolplanes
+    kind: K8sControlPlane
+    listKind: K8sControlPlaneList
+    plural: k8scontrolplanes
     shortNames:
     - ncp
-    singular: nestedcontrolplane
+    singular: k8scontrolplane
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -27,11 +27,10 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    name: v1alpha4
+    name: v1beta1
     schema:
       openAPIV3Schema:
-        description: NestedControlPlane is the Schema for the nestedcontrolplanes
-          API.
+        description: K8sControlPlane is the Schema for the k8scontrolplanes API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -46,7 +45,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: NestedControlPlaneSpec defines the desired state of NestedControlPlane.
+            description: K8sControlPlaneSpec defines the desired state of K8sControlPlane.
             properties:
               apiserver:
                 description: APIServerRef is the reference to the NestedAPIServer.
@@ -161,7 +160,7 @@ spec:
                 x-kubernetes-map-type: atomic
             type: object
           status:
-            description: NestedControlPlaneStatus defines the observed state of NestedControlPlane.
+            description: K8sControlPlaneStatus defines the observed state of K8sControlPlane.
             properties:
               apiserver:
                 description: APIServer stores the connection information from the
@@ -253,8 +252,8 @@ spec:
                 type: boolean
               ready:
                 default: false
-                description: Ready denotes that the NestedControlPlane API Server
-                  is ready to receive requests.
+                description: Ready denotes that the K8sControlPlane API Server is
+                  ready to receive requests.
                 type: boolean
             required:
             - ready

@@ -7,5 +7,6 @@ spec:
   template:
     spec:
       containers:
-      - image: gcr.io/nested-controlplane-controller-amd64:dev
+      - image: test.io/nested-controlplane-controller-amd64:dev
         name: manager
+        imagePullPolicy: Never  # or IfNotPresent

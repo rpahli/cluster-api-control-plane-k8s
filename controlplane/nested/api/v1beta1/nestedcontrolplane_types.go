@@ -27,13 +27,13 @@ import (
 )
 
 const (
-	// NestedControlPlaneFinalizer is added to the NestedControlPlane to allow
+	// K8sControlPlaneFinalizer is added to the K8sControlPlane to allow
 	// nested deletions to happen before the object is cleaned up.
-	NestedControlPlaneFinalizer = "nested.controlplane.cluster.x-k8s.io"
+	K8sControlPlaneFinalizer = "k8s.controlplane.cluster.x-k8s.io"
 )
 
-// NestedControlPlaneSpec defines the desired state of NestedControlPlane.
-type NestedControlPlaneSpec struct {
+// K8sControlPlaneSpec defines the desired state of K8sControlPlane.
+type K8sControlPlaneSpec struct {
 	// EtcdRef is the reference to the NestedEtcd.
 	EtcdRef *corev1.ObjectReference `json:"etcd,omitempty"`
 
@@ -46,24 +46,24 @@ type NestedControlPlaneSpec struct {
 	ControllerManagerRef *corev1.ObjectReference `json:"controllerManager,omitempty"`
 }
 
-// NestedControlPlaneStatus defines the observed state of NestedControlPlane.
-type NestedControlPlaneStatus struct {
+// K8sControlPlaneStatus defines the observed state of K8sControlPlane.
+type K8sControlPlaneStatus struct {
 	// Etcd stores the connection information from the downstream etcd
 	// implementation if the NestedEtcd type isn't used this
 	// allows other component controllers to fetch the endpoints.
 	// +optional
-	Etcd *NestedControlPlaneStatusEtcd `json:"etcd,omitempty"`
+	Etcd *K8sControlPlaneStatusEtcd `json:"etcd,omitempty"`
 
 	// APIServer stores the connection information from the control plane
 	// this should contain anything shared between control plane components.
 	// +optional
-	APIServer *NestedControlPlaneStatusAPIServer `json:"apiserver,omitempty"`
+	APIServer *K8sControlPlaneStatusAPIServer `json:"apiserver,omitempty"`
 
 	// Initialized denotes whether or not the control plane finished initializing.
 	// +optional
 	Initialized bool `json:"initialized"`
 
-	// Ready denotes that the NestedControlPlane API Server is ready to
+	// Ready denotes that the K8sControlPlane API Server is ready to
 	// receive requests.
 	// +kubebuilder:default=false
 	Ready bool `json:"ready"`
@@ -77,17 +77,17 @@ type NestedControlPlaneStatus struct {
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
-// NestedControlPlaneStatusEtcd defines the status of the etcd component to
+// K8sControlPlaneStatusEtcd defines the status of the etcd component to
 // allow other component controllers to take over the deployment.
-type NestedControlPlaneStatusEtcd struct {
+type K8sControlPlaneStatusEtcd struct {
 	// Addresses defines how to address the etcd instance
 	Addresses []NestedEtcdAddress `json:"addresses,omitempty"`
 }
 
-// NestedControlPlaneStatusAPIServer defines the status of the APIServer
+// K8sControlPlaneStatusAPIServer defines the status of the APIServer
 // component, this allows the next set of component controllers to take over
 // the deployment.
-type NestedControlPlaneStatusAPIServer struct {
+type K8sControlPlaneStatusAPIServer struct {
 	// ServiceCIDRs which is provided to kube-apiserver and kube-controller-manager.
 	// +optional
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
@@ -101,39 +101,39 @@ type NestedControlPlaneStatusAPIServer struct {
 // +k8s:defaulter-gen=true
 // +kubebuilder:storageversion
 
-// NestedControlPlane is the Schema for the nestedcontrolplanes API.
-type NestedControlPlane struct {
+// K8sControlPlane is the Schema for the k8scontrolplanes API.
+type K8sControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   NestedControlPlaneSpec   `json:"spec,omitempty"`
-	Status NestedControlPlaneStatus `json:"status,omitempty"`
+	Spec   K8sControlPlaneSpec   `json:"spec,omitempty"`
+	Status K8sControlPlaneStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// NestedControlPlaneList contains a list of NestedControlPlane.
-type NestedControlPlaneList struct {
+// K8sControlPlaneList contains a list of K8sControlPlane.
+type K8sControlPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []NestedControlPlane `json:"items"`
+	Items           []K8sControlPlane `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&NestedControlPlane{}, &NestedControlPlaneList{})
+	SchemeBuilder.Register(&K8sControlPlane{}, &K8sControlPlaneList{})
 }
 
 // GetOwnerCluster is a utility to return the owning clusterv1.Cluster.
-func (r *NestedControlPlane) GetOwnerCluster(ctx context.Context, cli client.Client) (cluster *clusterv1.Cluster, err error) {
+func (r *K8sControlPlane) GetOwnerCluster(ctx context.Context, cli client.Client) (cluster *clusterv1.Cluster, err error) {
 	return util.GetOwnerCluster(ctx, cli, r.ObjectMeta)
 }
 
 // GetConditions will return the conditions from the status.
-func (r *NestedControlPlane) GetConditions() clusterv1.Conditions {
+func (r *K8sControlPlane) GetConditions() clusterv1.Conditions {
 	return r.Status.Conditions
 }
 
 // SetConditions will reset the conditions to the new ones.
-func (r *NestedControlPlane) SetConditions(conditions clusterv1.Conditions) {
+func (r *K8sControlPlane) SetConditions(conditions clusterv1.Conditions) {
 	r.Status.Conditions = conditions
 }

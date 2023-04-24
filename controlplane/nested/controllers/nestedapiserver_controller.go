@@ -19,6 +19,11 @@ package controllers
 import (
 	"context"
 	"fmt"
+	infrav1 "sigs.k8s.io/cluster-api-provider-nested/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/predicates"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -41,8 +46,9 @@ import (
 // NestedAPIServerReconciler reconciles a NestedAPIServer object.
 type NestedAPIServerReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	WatchFilterValue string
 }
 
 // +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=nestedapiservers,verbs=get;list;watch;create;update;patch;delete
@@ -61,10 +67,10 @@ func (r *NestedAPIServerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		"name", nkas.GetName())
 
 	// 1. check if the ownerreference has been set by the
-	// NestedControlPlane controller.
+	// K8sControlPlane controller.
 	owner := getOwner(nkas.ObjectMeta)
 	if owner == (metav1.OwnerReference{}) {
-		// requeue the request if the owner NestedControlPlane has
+		// requeue the request if the owner K8sControlPlane has
 		// not been set yet.
 		log.Info("the owner has not been set yet, will retry later",
 			"namespace", nkas.GetNamespace(),
@@ -72,7 +78,7 @@ func (r *NestedAPIServerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	var ncp controlplanev1.NestedControlPlane
+	var ncp controlplanev1.K8sControlPlane
 	if err := r.Get(ctx, types.NamespacedName{Namespace: nkas.GetNamespace(), Name: owner.Name}, &ncp); err != nil {
 		log.Info("the owner could not be found, will retry later",
 			"namespace", nkas.GetNamespace(),
@@ -166,36 +172,26 @@ func (r *NestedAPIServerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *NestedAPIServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	/*if err := mgr.GetFieldIndexer().IndexField(context.TODO(),
-		&appsv1.StatefulSet{},
-		statefulsetOwnerKeyNKas,
-		func(rawObj client.Object) []string {
-			// grab the statefulset object, extract the owner.
-			sts := rawObj.(*appsv1.StatefulSet)
-			owner := metav1.GetControllerOf(sts)
-			if owner == nil {
-				return nil
-			}
-			// make sure it's a NestedAPIServer.
-			if owner.APIVersion != controlplanev1.GroupVersion.String() ||
-				owner.Kind != string(controlplanev1.APIServer) {
-				return nil
-			}
-
-			// and if so, return it.
-			return []string{owner.Name}
-		}); err != nil {
-		return err
-	}*/
-	return ctrl.NewControllerManagedBy(mgr).
+func (r *NestedAPIServerReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
+	log := ctrl.LoggerFrom(ctx)
+	_, err := ctrl.NewControllerManagedBy(mgr).
+		WithOptions(options).
 		For(&controlplanev1.NestedAPIServer{}).
+		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(log, r.WatchFilterValue)).
+		Watches(
+			&source.Kind{Type: &clusterv1.Machine{}},
+			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrav1.GroupVersion.WithKind("HCloudMachine"))),
+		).
 		Owns(&appsv1.StatefulSet{}).
-		Complete(r)
+		Build(r)
+	if err != nil {
+		return fmt.Errorf("error creating controller: %w", err)
+	}
+	return nil
 }
 
 // createAPIServerClientCrts will find of create client certs for the etcd cluster.
-func (r *NestedAPIServerReconciler) createAPIServerClientCrts(ctx context.Context, cluster *clusterv1.Cluster, ncp *controlplanev1.NestedControlPlane, nkas *controlplanev1.NestedAPIServer) error {
+func (r *NestedAPIServerReconciler) createAPIServerClientCrts(ctx context.Context, cluster *clusterv1.Cluster, ncp *controlplanev1.K8sControlPlane, nkas *controlplanev1.NestedAPIServer) error {
 	certificates := secret.NewCertificatesForInitialControlPlane(nil)
 	if err := certificates.Lookup(ctx, r.Client, util.ObjectKey(cluster)); err != nil {
 		return err
@@ -252,6 +248,6 @@ func (r *NestedAPIServerReconciler) createAPIServerClientCrts(ctx context.Contex
 		frontProxyKeyPair,
 	}
 
-	controllerRef := metav1.NewControllerRef(ncp, controlplanev1.GroupVersion.WithKind("NestedControlPlane"))
+	controllerRef := metav1.NewControllerRef(ncp, controlplanev1.GroupVersion.WithKind("K8sControlPlane"))
 	return certs.LookupOrSave(ctx, r.Client, util.ObjectKey(cluster), *controllerRef)
 }

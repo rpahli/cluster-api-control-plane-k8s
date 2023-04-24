@@ -62,10 +62,10 @@ func (r *NestedEtcdReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		"namespace", netcd.GetNamespace(),
 		"name", netcd.GetName())
 
-	// check if the ownerreference has been set by the NestedControlPlane controller.
+	// check if the ownerreference has been set by the K8sControlPlane controller.
 	owner := getOwner(netcd.ObjectMeta)
 	if owner == (metav1.OwnerReference{}) {
-		// requeue the request if the owner NestedControlPlane has
+		// requeue the request if the owner K8sControlPlane has
 		// not been set yet.
 		log.Info("the owner has not been set yet, will retry later",
 			"namespace", netcd.GetNamespace(),
@@ -73,7 +73,7 @@ func (r *NestedEtcdReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	var ncp controlplanev1.NestedControlPlane
+	var ncp controlplanev1.K8sControlPlane
 	if err := r.Get(ctx, types.NamespacedName{Namespace: netcd.GetNamespace(), Name: owner.Name}, &ncp); err != nil {
 		log.Info("the owner could not be found, will retry later",
 			"namespace", netcd.GetNamespace(),
@@ -239,7 +239,7 @@ func getEtcdServers(name, namespace string, replicas int32) (etcdServers []strin
 }
 
 // createEtcdClientCrts will find of create client certs for the etcd cluster.
-func (r *NestedEtcdReconciler) createEtcdClientCrts(ctx context.Context, cluster *controlplanev1alpha4.Cluster, ncp *controlplanev1.NestedControlPlane, netcd *controlplanev1.NestedEtcd) error {
+func (r *NestedEtcdReconciler) createEtcdClientCrts(ctx context.Context, cluster *controlplanev1alpha4.Cluster, ncp *controlplanev1.K8sControlPlane, netcd *controlplanev1.NestedEtcd) error {
 	certificates := secret.NewCertificatesForInitialControlPlane(nil)
 	if err := certificates.Lookup(ctx, r.Client, util.ObjectKey(cluster)); err != nil {
 		return err
@@ -274,6 +274,6 @@ func (r *NestedEtcdReconciler) createEtcdClientCrts(ctx context.Context, cluster
 		etcdHealthKeyPair,
 	}
 
-	controllerRef := metav1.NewControllerRef(ncp, controlplanev1.GroupVersion.WithKind("NestedControlPlane"))
+	controllerRef := metav1.NewControllerRef(ncp, controlplanev1.GroupVersion.WithKind("K8sControlPlane"))
 	return certs.LookupOrSave(ctx, r.Client, util.ObjectKey(cluster), *controllerRef)
 }

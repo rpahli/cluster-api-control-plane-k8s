@@ -65,7 +65,7 @@ func (r *NestedClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl
 		For(&infrav1.NestedCluster{}).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(log, r.WatchFilterValue)).
 		WithEventFilter(predicates.ResourceIsNotExternallyManaged(log)).
-		Owns(&controlplanev1.NestedControlPlane{}).
+		Owns(&controlplanev1.K8sControlPlane{}).
 		Build(r)
 	if err != nil {
 		return errors.Wrap(err, "error creating controller")
@@ -154,7 +154,7 @@ func (r *NestedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		Namespace: cluster.Spec.ControlPlaneRef.Namespace,
 		Name:      cluster.Spec.ControlPlaneRef.Name,
 	}
-	ncp := &controlplanev1.NestedControlPlane{}
+	ncp := &controlplanev1.K8sControlPlane{}
 	if err := r.Get(ctx, objectKey, ncp); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{Requeue: true}, nil

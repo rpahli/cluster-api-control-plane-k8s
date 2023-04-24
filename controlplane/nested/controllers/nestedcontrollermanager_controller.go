@@ -56,10 +56,10 @@ func (r *NestedControllerManagerReconciler) Reconcile(ctx context.Context, req c
 		"name", nkcm.GetName())
 
 	// 1. check if the ownerreference has been set by the
-	// NestedControlPlane controller.
+	// K8sControlPlane controller.
 	owner := getOwner(nkcm.ObjectMeta)
 	if owner == (metav1.OwnerReference{}) {
-		// requeue the request if the owner NestedControlPlane has
+		// requeue the request if the owner K8sControlPlane has
 		// not been set yet.
 		log.Info("the owner has not been set yet, will retry later",
 			"namespace", nkcm.GetNamespace(),
@@ -67,7 +67,7 @@ func (r *NestedControllerManagerReconciler) Reconcile(ctx context.Context, req c
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	var ncp controlplanev1.NestedControlPlane
+	var ncp controlplanev1.K8sControlPlane
 	if err := r.Get(ctx, types.NamespacedName{Namespace: nkcm.GetNamespace(), Name: owner.Name}, &ncp); err != nil {
 		log.Info("the owner could not be found, will retry later",
 			"namespace", nkcm.GetNamespace(),

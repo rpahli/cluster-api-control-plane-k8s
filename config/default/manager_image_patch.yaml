@@ -7,5 +7,5 @@ spec:
   template:
     spec:
       containers:
-      - image: gcr.io/cluster-api-nested-controller-amd64:dev
+      - image: test.io/cluster-api-nested-controller-amd64:dev
         name: manager

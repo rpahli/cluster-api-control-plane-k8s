@@ -53,7 +53,7 @@ import (
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete.
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete.
 
-// NestedControlPlaneReconciler reconciles a NestedControlPlane object.
+// NestedControlPlaneReconciler reconciles a K8sControlPlane object.
 type NestedControlPlaneReconciler struct {
 	client.Client
 	Log    logr.Logger
@@ -63,7 +63,7 @@ type NestedControlPlaneReconciler struct {
 // SetupWithManager will configure the controller with the manager.
 func (r *NestedControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&controlplanev1.NestedControlPlane{}).
+		For(&controlplanev1.K8sControlPlane{}).
 		Owns(&controlplanev1.NestedEtcd{}).
 		Owns(&controlplanev1.NestedAPIServer{}).
 		Owns(&controlplanev1.NestedControllerManager{}).
@@ -73,9 +73,9 @@ func (r *NestedControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error 
 // Reconcile is ths main process which will handle updating the NCP.
 func (r *NestedControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("nestedcontrolplane", req.NamespacedName)
-	log.Info("Reconciling NestedControlPlane...")
-	// Fetch the NestedControlPlane
-	ncp := &controlplanev1.NestedControlPlane{}
+	log.Info("Reconciling K8sControlPlane...")
+	// Fetch the K8sControlPlane
+	ncp := &controlplanev1.K8sControlPlane{}
 	if err := r.Get(ctx, req.NamespacedName, ncp); err != nil {
 		// check for not found and don't requeue
 		if apierrors.IsNotFound(err) {
@@ -105,15 +105,15 @@ func (r *NestedControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	if !controllerutil.ContainsFinalizer(ncp, controlplanev1.NestedControlPlaneFinalizer) {
-		controllerutil.AddFinalizer(ncp, controlplanev1.NestedControlPlaneFinalizer)
+	if !controllerutil.ContainsFinalizer(ncp, controlplanev1.K8sControlPlaneFinalizer) {
+		controllerutil.AddFinalizer(ncp, controlplanev1.K8sControlPlaneFinalizer)
 
 		// patch and return right away instead of reusing the main defer,
 		// because the main defer may take too much time to get cluster status
 		// Patch ObservedGeneration only if the reconciliation completed successfully
 		patchOpts := []patch.Option{patch.WithStatusObservedGeneration{}}
 		if err := patchHelper.Patch(ctx, ncp, patchOpts...); err != nil {
-			log.Error(err, "Failed to patch NestedControlPlane to add finalizer")
+			log.Error(err, "Failed to patch K8sControlPlane to add finalizer")
 			return ctrl.Result{}, err
 		}
 
@@ -137,22 +137,22 @@ func (r *NestedControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.R
 }
 
 // reconcileDelete will delete the control plane and all it's nestedcomponents.
-func (r *NestedControlPlaneReconciler) reconcileDelete(ctx context.Context, log logr.Logger, ncp *controlplanev1.NestedControlPlane) (ctrl.Result, error) {
+func (r *NestedControlPlaneReconciler) reconcileDelete(ctx context.Context, log logr.Logger, ncp *controlplanev1.K8sControlPlane) (ctrl.Result, error) {
 	patchHelper, err := patch.NewHelper(ncp, r.Client)
 	if err != nil {
 		log.Error(err, "Failed to configure the patch helper")
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	if controllerutil.ContainsFinalizer(ncp, controlplanev1.NestedControlPlaneFinalizer) {
-		controllerutil.RemoveFinalizer(ncp, controlplanev1.NestedControlPlaneFinalizer)
+	if controllerutil.ContainsFinalizer(ncp, controlplanev1.K8sControlPlaneFinalizer) {
+		controllerutil.RemoveFinalizer(ncp, controlplanev1.K8sControlPlaneFinalizer)
 
 		// patch and return right away instead of reusing the main defer,
 		// because the main defer may take too much time to get cluster status
 		// Patch ObservedGeneration only if the reconciliation completed successfully
 		patchOpts := []patch.Option{patch.WithStatusObservedGeneration{}}
 		if err := patchHelper.Patch(ctx, ncp, patchOpts...); err != nil {
-			log.Error(err, "Failed to patch NestedControlPlane to remove finalizer")
+			log.Error(err, "Failed to patch K8sControlPlane to remove finalizer")
 			return ctrl.Result{}, err
 		}
 
@@ -161,7 +161,7 @@ func (r *NestedControlPlaneReconciler) reconcileDelete(ctx context.Context, log 
 	return ctrl.Result{}, nil
 }
 
-func patchControlPlane(ctx context.Context, patchHelper *patch.Helper, ncp *controlplanev1.NestedControlPlane) error {
+func patchControlPlane(ctx context.Context, patchHelper *patch.Helper, ncp *controlplanev1.K8sControlPlane) error {
 	// Always update the readyCondition by summarizing the state of other conditions.
 	conditions.SetSummary(ncp,
 		conditions.WithConditions(
@@ -184,11 +184,11 @@ func patchControlPlane(ctx context.Context, patchHelper *patch.Helper, ncp *cont
 }
 
 // reconcile will handle all "normal" NCP reconciles this means create/update actions.
-func (r *NestedControlPlaneReconciler) reconcile(ctx context.Context, log logr.Logger, cluster *clusterv1.Cluster, ncp *controlplanev1.NestedControlPlane) (res ctrl.Result, reterr error) {
-	log.Info("Reconcile NestedControlPlane")
+func (r *NestedControlPlaneReconciler) reconcile(ctx context.Context, log logr.Logger, cluster *clusterv1.Cluster, ncp *controlplanev1.K8sControlPlane) (res ctrl.Result, reterr error) {
+	log.Info("Reconcile K8sControlPlane")
 
 	certificates := secret.NewCertificatesForInitialControlPlane(nil)
-	controllerRef := metav1.NewControllerRef(ncp, controlplanev1.GroupVersion.WithKind("NestedControlPlane"))
+	controllerRef := metav1.NewControllerRef(ncp, controlplanev1.GroupVersion.WithKind("K8sControlPlane"))
 	if err := certificates.LookupOrGenerate(ctx, r.Client, util.ObjectKey(cluster), *controllerRef); err != nil {
 		log.Error(err, "unable to lookup or create cluster certificates")
 		conditions.MarkFalse(ncp, kcpv1.CertificatesAvailableCondition, kcpv1.CertificatesGenerationFailedReason, clusterv1.ConditionSeverityWarning, err.Error())
@@ -247,7 +247,7 @@ func (r *NestedControlPlaneReconciler) reconcile(ctx context.Context, log logr.L
 				}
 			}
 
-			if !util.HasOwner(component.GetOwnerReferences(), controlplanev1.GroupVersion.String(), []string{"NestedControlPlane"}) {
+			if !util.HasOwner(component.GetOwnerReferences(), controlplanev1.GroupVersion.String(), []string{"K8sControlPlane"}) {
 				log.Info("Component Missing Owner", "component", nestedComponent)
 				addOwners = append(addOwners, component)
 			}
@@ -292,7 +292,7 @@ func (r *NestedControlPlaneReconciler) reconcile(ctx context.Context, log logr.L
 
 // reconcileKubeconfig will check if the control plane endpoint has been set
 // and if so it will generate the KUBECONFIG or regenerate if it's expired.
-func (r *NestedControlPlaneReconciler) reconcileKubeconfig(ctx context.Context, cluster *clusterv1.Cluster, ncp *controlplanev1.NestedControlPlane) (ctrl.Result, error) {
+func (r *NestedControlPlaneReconciler) reconcileKubeconfig(ctx context.Context, cluster *clusterv1.Cluster, ncp *controlplanev1.K8sControlPlane) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	endpoint := cluster.Spec.ControlPlaneEndpoint
@@ -300,7 +300,7 @@ func (r *NestedControlPlaneReconciler) reconcileKubeconfig(ctx context.Context, 
 		return ctrl.Result{}, nil
 	}
 
-	controllerOwnerRef := *metav1.NewControllerRef(ncp, controlplanev1.GroupVersion.WithKind("NestedControlPlane"))
+	controllerOwnerRef := *metav1.NewControllerRef(ncp, controlplanev1.GroupVersion.WithKind("K8sControlPlane"))
 	clusterName := util.ObjectKey(cluster)
 	configSecret, err := secret.GetFromNamespacedName(ctx, r.Client, clusterName, secret.Kubeconfig)
 	switch {
@@ -343,7 +343,7 @@ func (r *NestedControlPlaneReconciler) reconcileKubeconfig(ctx context.Context, 
 
 // reconcileControllerOwners will loop through any known nested components that
 // aren't owned by a control plane yet and associate them.
-func (r *NestedControlPlaneReconciler) reconcileControllerOwners(ctx context.Context, ncp *controlplanev1.NestedControlPlane, addOwners []client.Object) error {
+func (r *NestedControlPlaneReconciler) reconcileControllerOwners(ctx context.Context, ncp *controlplanev1.K8sControlPlane, addOwners []client.Object) error {
 	for _, component := range addOwners {
 		if err := ctrl.SetControllerReference(ncp, component, r.Scheme); err != nil {
 			if _, ok := err.(*controllerutil.AlreadyOwnedError); ok {

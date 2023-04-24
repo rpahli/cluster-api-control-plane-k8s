@@ -21,13 +21,14 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"sigs.k8s.io/cluster-api-provider-nested/controlplane/utils"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"time"
 
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/feature"
 	"sigs.k8s.io/cluster-api/version"
@@ -54,6 +55,9 @@ var (
 	syncPeriod                  time.Duration
 	webhookPort                 int
 	healthAddr                  string
+	concurrency                 int
+	leaderElectionNamespace     string
+	logLevel                    string
 )
 
 func init() {
@@ -89,11 +93,17 @@ func InitFlags(fs *pflag.FlagSet) {
 	fs.DurationVar(&syncPeriod, "sync-period", 10*time.Minute,
 		"The minimum interval at which watched resources are reconciled (e.g. 15m)")
 
+	fs.StringVar(&leaderElectionNamespace, "leader-elect-namespace", "", "Namespace that the controller performs leader election in. If unspecified, the controller will discover which namespace it is running in.")
+
 	fs.IntVar(&webhookPort, "webhook-port", 0,
 		"Webhook Server port, disabled by default. When enabled, the manager will only work as webhook server, no reconcilers are installed.")
 
 	fs.StringVar(&healthAddr, "health-addr", ":9440",
 		"The address the health endpoint binds to.")
+
+	fs.IntVar(&concurrency, "concurrency", 1, "Number of concurrency to process simultaneously")
+
+	flag.StringVar(&logLevel, "log-level", "debug", "Specifies log level. Options are 'debug', 'info' and 'error'")
 
 	feature.MutableGates.AddFlag(fs)
 }
@@ -105,7 +115,7 @@ func main() {
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
 
-	ctrl.SetLogger(klogr.New())
+	ctrl.SetLogger(utils.GetDefaultLogger(logLevel))
 
 	if profilerAddress != "" {
 		setupLog.Info("Profiler listening for requests at", "address", profilerAddress)
@@ -115,16 +125,18 @@ func main() {
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "controller-leader-election-capn",
-		LeaseDuration:          &leaderElectionLeaseDuration,
-		RenewDeadline:          &leaderElectionRenewDeadline,
-		RetryPeriod:            &leaderElectionRetryPeriod,
-		SyncPeriod:             &syncPeriod,
-		Port:                   webhookPort,
-		HealthProbeBindAddress: healthAddr,
+		Scheme:                     scheme,
+		MetricsBindAddress:         metricsAddr,
+		LeaderElection:             enableLeaderElection,
+		LeaderElectionID:           "k8s.cluster.x-k8s.io",
+		LeaseDuration:              &leaderElectionLeaseDuration,
+		RenewDeadline:              &leaderElectionRenewDeadline,
+		RetryPeriod:                &leaderElectionRetryPeriod,
+		LeaderElectionNamespace:    leaderElectionNamespace,
+		LeaderElectionResourceLock: "leases",
+		SyncPeriod:                 &syncPeriod,
+		Port:                       webhookPort,
+		HealthProbeBindAddress:     healthAddr,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -146,10 +158,10 @@ func main() {
 
 	if err = (&controllers.NestedControlPlaneReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("controlplane").WithName("NestedControlPlane"),
+		Log:    ctrl.Log.WithName("controllers").WithName("controlplane").WithName("K8sControlPlane"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "NestedControlPlane")
+		setupLog.Error(err, "unable to create controller", "controller", "K8sControlPlane")
 		os.Exit(1)
 	}
 
@@ -166,7 +178,7 @@ func main() {
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("controlplane").WithName("NestedAPIServer"),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: concurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NestedAPIServer")
 		os.Exit(1)
 	}
