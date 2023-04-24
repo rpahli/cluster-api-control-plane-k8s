@@ -65,7 +65,7 @@ func (r *NestedControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&controlplanev1.K8sControlPlane{}).
 		Owns(&controlplanev1.NestedEtcd{}).
-		Owns(&controlplanev1.NestedAPIServer{}).
+		Owns(&controlplanev1.K8sAPIServer{}).
 		Owns(&controlplanev1.NestedControllerManager{}).
 		Complete(r)
 }
@@ -214,7 +214,7 @@ func (r *NestedControlPlaneReconciler) reconcile(ctx context.Context, log logr.L
 	isReady := []int{}
 	nestedComponents := map[client.Object]*corev1.ObjectReference{
 		&controlplanev1.NestedEtcd{}:              ncp.Spec.EtcdRef,
-		&controlplanev1.NestedAPIServer{}:         ncp.Spec.APIServerRef,
+		&controlplanev1.K8sAPIServer{}:            ncp.Spec.APIServerRef,
 		&controlplanev1.NestedControllerManager{}: ncp.Spec.ControllerManagerRef,
 	}
 

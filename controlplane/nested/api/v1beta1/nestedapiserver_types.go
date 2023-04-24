@@ -22,16 +22,16 @@ import (
 	addonv1alpha1 "sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/addon/pkg/apis/v1alpha1"
 )
 
-// NestedAPIServerSpec defines the desired state of NestedAPIServer.
-type NestedAPIServerSpec struct {
+// K8sAPIServerSpec defines the desired state of K8sAPIServer.
+type K8sAPIServerSpec struct {
 	// NestedComponentSpec contains the common and user-specified information that are
 	// required for creating the component.
 	// +optional
 	NestedComponentSpec `json:",inline"`
 }
 
-// NestedAPIServerStatus defines the observed state of NestedAPIServer.
-type NestedAPIServerStatus struct {
+// K8sAPIServerStatus defines the observed state of K8sAPIServer.
+type K8sAPIServerStatus struct {
 	// APIServerService is the reference to the service that expose the APIServer.
 	// +optional
 	APIServerService *corev1.ObjectReference `json:"apiserverService,omitempty"`
@@ -47,56 +47,56 @@ type NestedAPIServerStatus struct {
 //+kubebuilder:subresource:status
 // +kubebuilder:storageversion
 
-// NestedAPIServer is the Schema for the nestedapiservers API.
-type NestedAPIServer struct {
+// K8sAPIServer is the Schema for the nestedapiservers API.
+type K8sAPIServer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   NestedAPIServerSpec   `json:"spec,omitempty"`
-	Status NestedAPIServerStatus `json:"status,omitempty"`
+	Spec   K8sAPIServerSpec   `json:"spec,omitempty"`
+	Status K8sAPIServerStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// NestedAPIServerList contains a list of NestedAPIServer.
-type NestedAPIServerList struct {
+// K8sAPIServerList contains a list of K8sAPIServer.
+type K8sAPIServerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []NestedAPIServer `json:"items"`
+	Items           []K8sAPIServer `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&NestedAPIServer{}, &NestedAPIServerList{})
+	SchemeBuilder.Register(&K8sAPIServer{}, &K8sAPIServerList{})
 }
 
-var _ addonv1alpha1.CommonObject = &NestedAPIServer{}
-var _ addonv1alpha1.Patchable = &NestedAPIServer{}
+var _ addonv1alpha1.CommonObject = &K8sAPIServer{}
+var _ addonv1alpha1.Patchable = &K8sAPIServer{}
 
 // ComponentName returns the name of the component for use with
 // addonv1alpha1.CommonObject.
-func (c *NestedAPIServer) ComponentName() string {
+func (c *K8sAPIServer) ComponentName() string {
 	return string(APIServer)
 }
 
 // CommonSpec returns the addons spec of the object allowing common funcs like
 // Channel & Version to be usable.
-func (c *NestedAPIServer) CommonSpec() addonv1alpha1.CommonSpec {
+func (c *K8sAPIServer) CommonSpec() addonv1alpha1.CommonSpec {
 	return c.Spec.CommonSpec
 }
 
 // GetCommonStatus will return the common status for checking is a component
 // was successfully deployed.
-func (c *NestedAPIServer) GetCommonStatus() addonv1alpha1.CommonStatus {
+func (c *K8sAPIServer) GetCommonStatus() addonv1alpha1.CommonStatus {
 	return c.Status.CommonStatus
 }
 
 // SetCommonStatus will set the status so that abstract representations can set
 // Ready and Phases.
-func (c *NestedAPIServer) SetCommonStatus(s addonv1alpha1.CommonStatus) {
+func (c *K8sAPIServer) SetCommonStatus(s addonv1alpha1.CommonStatus) {
 	c.Status.CommonStatus = s
 }
 
 // PatchSpec returns the patches to be applied.
-func (c *NestedAPIServer) PatchSpec() addonv1alpha1.PatchSpec {
+func (c *K8sAPIServer) PatchSpec() addonv1alpha1.PatchSpec {
 	return c.Spec.PatchSpec
 }

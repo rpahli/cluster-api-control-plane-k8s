@@ -43,7 +43,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
-// NestedAPIServerReconciler reconciles a NestedAPIServer object.
+// NestedAPIServerReconciler reconciles a K8sAPIServer object.
 type NestedAPIServerReconciler struct {
 	client.Client
 	Log              logr.Logger
@@ -57,12 +57,12 @@ type NestedAPIServerReconciler struct {
 
 func (r *NestedAPIServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("nestedapiserver", req.NamespacedName)
-	log.Info("Reconciling NestedAPIServer...")
-	var nkas controlplanev1.NestedAPIServer
+	log.Info("Reconciling K8sAPIServer...")
+	var nkas controlplanev1.K8sAPIServer
 	if err := r.Get(ctx, req.NamespacedName, &nkas); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("creating NestedAPIServer",
+	log.Info("creating K8sAPIServer",
 		"namespace", nkas.GetNamespace(),
 		"name", nkas.GetName())
 
@@ -92,7 +92,7 @@ func (r *NestedAPIServerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	// 2. create the NestedAPIServer StatefulSet if not found
+	// 2. create the K8sAPIServer StatefulSet if not found
 	nkasName := fmt.Sprintf("%s-apiserver", cluster.GetName())
 	var nkasSts appsv1.StatefulSet
 	if err := r.Get(ctx, types.NamespacedName{
@@ -100,19 +100,19 @@ func (r *NestedAPIServerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		Name:      nkasName,
 	}, &nkasSts); err != nil {
 		if apierrors.IsNotFound(err) {
-			// as the statefulset is not found, mark the NestedAPIServer as unready.
+			// as the statefulset is not found, mark the K8sAPIServer as unready.
 			if IsComponentReady(nkas.Status.CommonStatus) {
 				nkas.Status.Phase =
 					string(controlplanev1.Unready)
 				log.V(5).Info("The corresponding statefulset is not found, " +
-					"will mark the NestedAPIServer as unready")
+					"will mark the K8sAPIServer as unready")
 				if err := r.Status().Update(ctx, &nkas); err != nil {
-					log.Error(err, "fail to update the status of the NestedAPIServer Object")
+					log.Error(err, "fail to update the status of the K8sAPIServer Object")
 					return ctrl.Result{}, err
 				}
 			}
 			if err := r.createAPIServerClientCrts(ctx, cluster, &ncp, &nkas); err != nil {
-				log.Error(err, "fail to create NestedAPIServer Client Certs")
+				log.Error(err, "fail to create K8sAPIServer Client Certs")
 				return ctrl.Result{}, err
 			}
 
@@ -121,51 +121,51 @@ func (r *NestedAPIServerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 				r.Client, nkas.ObjectMeta, nkas.Spec.NestedComponentSpec,
 				controlplanev1.APIServer,
 				kubeadm.APIServer, cluster.GetName(), log); err != nil {
-				log.Error(err, "fail to create NestedAPIServer StatefulSet")
+				log.Error(err, "fail to create K8sAPIServer StatefulSet")
 				return ctrl.Result{}, err
 			}
-			log.Info("successfully create the NestedAPIServer StatefulSet")
+			log.Info("successfully create the K8sAPIServer StatefulSet")
 			return ctrl.Result{}, nil
 		}
-		log.Error(err, "fail to get NestedAPIServer StatefulSet")
+		log.Error(err, "fail to get K8sAPIServer StatefulSet")
 		return ctrl.Result{}, err
 	}
 
-	// 3. reconcile the NestedAPIServer based on the status of the StatefulSet.
-	// Mark the NestedAPIServer as Ready if the StatefulSet is ready.
+	// 3. reconcile the K8sAPIServer based on the status of the StatefulSet.
+	// Mark the K8sAPIServer as Ready if the StatefulSet is ready.
 	if nkasSts.Status.ReadyReplicas == nkasSts.Status.Replicas {
-		log.Info("The NestedAPIServer StatefulSet is ready")
+		log.Info("The K8sAPIServer StatefulSet is ready")
 		if !IsComponentReady(nkas.Status.CommonStatus) {
-			// As the NestedAPIServer StatefulSet is ready, update
-			// NestedAPIServer status.
+			// As the K8sAPIServer StatefulSet is ready, update
+			// K8sAPIServer status.
 			nkas.Status.Phase = string(controlplanev1.Ready)
 			objRef, err := genAPIServerSvcRef(r.Client, nkas, cluster.GetName())
 			if err != nil {
-				log.Error(err, "fail to generate NestedAPIServer Service Reference")
+				log.Error(err, "fail to generate K8sAPIServer Service Reference")
 				return ctrl.Result{}, err
 			}
 			nkas.Status.APIServerService = &objRef
 
 			log.V(5).Info("The corresponding statefulset is ready, " +
-				"will mark the NestedAPIServer as ready")
+				"will mark the K8sAPIServer as ready")
 			if err := r.Status().Update(ctx, &nkas); err != nil {
-				log.Error(err, "fail to update NestedAPIServer Object")
+				log.Error(err, "fail to update K8sAPIServer Object")
 				return ctrl.Result{}, err
 			}
-			log.Info("Successfully set the NestedAPIServer object to ready")
+			log.Info("Successfully set the K8sAPIServer object to ready")
 		}
 		return ctrl.Result{}, nil
 	}
 
-	// mark the NestedAPIServer as unready, if the NestedAPIServer
+	// mark the K8sAPIServer as unready, if the K8sAPIServer
 	// StatefulSet is unready.
 	if IsComponentReady(nkas.Status.CommonStatus) {
 		nkas.Status.Phase = string(controlplanev1.Unready)
 		if err := r.Status().Update(ctx, &nkas); err != nil {
-			log.Error(err, "fail to update NestedAPIServer Object")
+			log.Error(err, "fail to update K8sAPIServer Object")
 			return ctrl.Result{}, err
 		}
-		log.Info("Successfully set the NestedAPIServer object to unready")
+		log.Info("Successfully set the K8sAPIServer object to unready")
 	}
 
 	return ctrl.Result{}, nil
@@ -176,7 +176,7 @@ func (r *NestedAPIServerReconciler) SetupWithManager(ctx context.Context, mgr ct
 	log := ctrl.LoggerFrom(ctx)
 	_, err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
-		For(&controlplanev1.NestedAPIServer{}).
+		For(&controlplanev1.K8sAPIServer{}).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(log, r.WatchFilterValue)).
 		Watches(
 			&source.Kind{Type: &clusterv1.Machine{}},
@@ -191,7 +191,7 @@ func (r *NestedAPIServerReconciler) SetupWithManager(ctx context.Context, mgr ct
 }
 
 // createAPIServerClientCrts will find of create client certs for the etcd cluster.
-func (r *NestedAPIServerReconciler) createAPIServerClientCrts(ctx context.Context, cluster *clusterv1.Cluster, ncp *controlplanev1.K8sControlPlane, nkas *controlplanev1.NestedAPIServer) error {
+func (r *NestedAPIServerReconciler) createAPIServerClientCrts(ctx context.Context, cluster *clusterv1.Cluster, ncp *controlplanev1.K8sControlPlane, nkas *controlplanev1.K8sAPIServer) error {
 	certificates := secret.NewCertificatesForInitialControlPlane(nil)
 	if err := certificates.Lookup(ctx, r.Client, util.ObjectKey(cluster)); err != nil {
 		return err

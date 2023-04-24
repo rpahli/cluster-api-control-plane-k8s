@@ -37,7 +37,7 @@ type K8sControlPlaneSpec struct {
 	// EtcdRef is the reference to the NestedEtcd.
 	EtcdRef *corev1.ObjectReference `json:"etcd,omitempty"`
 
-	// APIServerRef is the reference to the NestedAPIServer.
+	// APIServerRef is the reference to the K8sAPIServer.
 	// +optional
 	APIServerRef *corev1.ObjectReference `json:"apiserver,omitempty"`
 

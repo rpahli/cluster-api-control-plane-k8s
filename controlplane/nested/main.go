@@ -176,10 +176,10 @@ func main() {
 
 	if err = (&controllers.NestedAPIServerReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("controlplane").WithName("NestedAPIServer"),
+		Log:    ctrl.Log.WithName("controllers").WithName("controlplane").WithName("K8sAPIServer"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: concurrency}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "NestedAPIServer")
+		setupLog.Error(err, "unable to create controller", "controller", "K8sAPIServer")
 		os.Exit(1)
 	}
 

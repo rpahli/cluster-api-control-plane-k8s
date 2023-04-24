@@ -59,7 +59,7 @@ type ComponentKind string
 
 const (
 	// APIServer defines the Kind name for the apiserver.
-	APIServer ComponentKind = "NestedAPIServer"
+	APIServer ComponentKind = "K8sAPIServer"
 	// Etcd defines the Kind name for the etcd.
 	Etcd ComponentKind = "NestedEtcd"
 	// ControllerManager defines the kind name for the controller-manager.

@@ -279,7 +279,7 @@ func getOwner(ncMeta metav1.ObjectMeta) metav1.OwnerReference {
 // genAPIServerSvcRef generates the ObjectReference that points to the
 // APISrver service.
 func genAPIServerSvcRef(cli ctrlcli.Client,
-	nkas controlplanev1.NestedAPIServer, clusterName string) (corev1.ObjectReference, error) {
+	nkas controlplanev1.K8sAPIServer, clusterName string) (corev1.ObjectReference, error) {
 	var (
 		svc    corev1.Service
 		objRef corev1.ObjectReference
