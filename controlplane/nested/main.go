@@ -185,10 +185,10 @@ func main() {
 
 	if err = (&controllers.NestedControllerManagerReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("controlplane").WithName("NestedControllerManager"),
+		Log:    ctrl.Log.WithName("controllers").WithName("controlplane").WithName("K8sControllerManager"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "NestedControllerManager")
+		setupLog.Error(err, "unable to create controller", "controller", "K8sControllerManager")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

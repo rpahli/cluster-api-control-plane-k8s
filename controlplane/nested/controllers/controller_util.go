@@ -62,7 +62,7 @@ func createNestedComponentSts(ctx context.Context,
 	}
 
 	if kubeAdmKind != kubeadm.ControllerManager {
-		// no need to create the service for the NestedControllerManager
+		// no need to create the service for the K8sControllerManager
 		ncSvc, err := genServiceObject(kubeAdmKind, clusterName, ncMeta.GetName(), ncMeta.GetNamespace())
 		if err != nil {
 			return errors.Errorf("fail to generate the Service object: %v", err)

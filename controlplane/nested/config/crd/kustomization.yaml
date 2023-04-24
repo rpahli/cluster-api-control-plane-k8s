@@ -5,7 +5,7 @@ resources:
 - bases/controlplane.cluster.x-k8s.io_k8scontrolplanes.yaml
 - bases/controlplane.cluster.x-k8s.io_nestedetcds.yaml
 - bases/controlplane.cluster.x-k8s.io_k8sapiservers.yaml
-- bases/controlplane.cluster.x-k8s.io_nestedcontrollermanagers.yaml
+- bases/controlplane.cluster.x-k8s.io_k8scontrollermanagers.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

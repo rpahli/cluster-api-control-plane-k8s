@@ -85,7 +85,7 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               controllerManager:
-                description: ContollerManagerRef is the reference to the NestedControllerManager.
+                description: ContollerManagerRef is the reference to the K8sControllerManager.
                 properties:
                   apiVersion:
                     description: API version of the referent.

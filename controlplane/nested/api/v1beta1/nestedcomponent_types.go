@@ -63,5 +63,5 @@ const (
 	// Etcd defines the Kind name for the etcd.
 	Etcd ComponentKind = "NestedEtcd"
 	// ControllerManager defines the kind name for the controller-manager.
-	ControllerManager ComponentKind = "NestedControllerManager"
+	ControllerManager ComponentKind = "K8sControllerManager"
 )

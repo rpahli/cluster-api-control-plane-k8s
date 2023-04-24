@@ -5,19 +5,19 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
-  name: nestedcontrollermanagers.controlplane.cluster.x-k8s.io
+  name: k8scontrollermanagers.controlplane.cluster.x-k8s.io
 spec:
   group: controlplane.cluster.x-k8s.io
   names:
     categories:
     - capi
     - capn
-    kind: NestedControllerManager
-    listKind: NestedControllerManagerList
-    plural: nestedcontrollermanagers
+    kind: K8sControllerManager
+    listKind: K8sControllerManagerList
+    plural: k8scontrollermanagers
     shortNames:
     - nkcm
-    singular: nestedcontrollermanager
+    singular: k8scontrollermanager
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -30,7 +30,7 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: NestedControllerManager is the Schema for the nestedcontrollermanagers
+        description: K8sControllerManager is the Schema for the nestedcontrollermanagers
           API.
         properties:
           apiVersion:
@@ -46,8 +46,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: NestedControllerManagerSpec defines the desired state of
-              NestedControllerManager.
+            description: K8sControllerManagerSpec defines the desired state of K8sControllerManager.
             properties:
               channel:
                 description: 'Channel specifies a channel that can be used to resolve
@@ -96,8 +95,8 @@ spec:
                 type: string
             type: object
           status:
-            description: NestedControllerManagerStatus defines the observed state
-              of NestedControllerManager.
+            description: K8sControllerManagerStatus defines the observed state of
+              K8sControllerManager.
             properties:
               errors:
                 items:

@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/kubeadm"
 )
 
-// NestedControllerManagerReconciler reconciles a NestedControllerManager object.
+// NestedControllerManagerReconciler reconciles a K8sControllerManager object.
 type NestedControllerManagerReconciler struct {
 	client.Client
 	Log    logr.Logger
@@ -46,12 +46,12 @@ type NestedControllerManagerReconciler struct {
 
 func (r *NestedControllerManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("nestedcontrollermanager", req.NamespacedName)
-	log.Info("Reconciling NestedControllerManager...")
-	var nkcm controlplanev1.NestedControllerManager
+	log.Info("Reconciling K8sControllerManager...")
+	var nkcm controlplanev1.K8sControllerManager
 	if err := r.Get(ctx, req.NamespacedName, &nkcm); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("creating NestedControllerManager",
+	log.Info("creating K8sControllerManager",
 		"namespace", nkcm.GetNamespace(),
 		"name", nkcm.GetName())
 
@@ -81,7 +81,7 @@ func (r *NestedControllerManagerReconciler) Reconcile(ctx context.Context, req c
 		return ctrl.Result{}, err
 	}
 
-	// 2. create the NestedControllerManager StatefulSet if not found
+	// 2. create the K8sControllerManager StatefulSet if not found
 	nkcmName := fmt.Sprintf("%s-controller-manager", cluster.GetName())
 	var nkcmSts appsv1.StatefulSet
 	if err := r.Get(ctx, types.NamespacedName{
@@ -89,15 +89,15 @@ func (r *NestedControllerManagerReconciler) Reconcile(ctx context.Context, req c
 		Name:      nkcmName,
 	}, &nkcmSts); err != nil {
 		if apierrors.IsNotFound(err) {
-			// as the statefulset is not found, mark the NestedControllerManager
+			// as the statefulset is not found, mark the K8sControllerManager
 			// as unready
 			if IsComponentReady(nkcm.Status.CommonStatus) {
 				nkcm.Status.Phase =
 					string(controlplanev1.Unready)
 				log.V(5).Info("The corresponding statefulset is not found, " +
-					"will mark the NestedControllerManager as unready")
+					"will mark the K8sControllerManager as unready")
 				if err := r.Status().Update(ctx, &nkcm); err != nil {
-					log.Error(err, "fail to update the status of the NestedControllerManager Object")
+					log.Error(err, "fail to update the status of the K8sControllerManager Object")
 					return ctrl.Result{}, err
 				}
 			}
@@ -106,44 +106,44 @@ func (r *NestedControllerManagerReconciler) Reconcile(ctx context.Context, req c
 				r.Client, nkcm.ObjectMeta, nkcm.Spec.NestedComponentSpec,
 				controlplanev1.ControllerManager,
 				kubeadm.ControllerManager, cluster.GetName(), log); err != nil {
-				log.Error(err, "fail to create NestedControllerManager StatefulSet")
+				log.Error(err, "fail to create K8sControllerManager StatefulSet")
 				return ctrl.Result{}, err
 			}
-			log.Info("successfully create the NestedControllerManager StatefulSet")
+			log.Info("successfully create the K8sControllerManager StatefulSet")
 			return ctrl.Result{}, nil
 		}
-		log.Error(err, "fail to get NestedControllerManager StatefulSet")
+		log.Error(err, "fail to get K8sControllerManager StatefulSet")
 		return ctrl.Result{}, err
 	}
 
-	// 3. reconcile the NestedControllerManager based on the status of the StatefulSet.
-	// Mark the NestedControllerManager as Ready if the StatefulSet is ready
+	// 3. reconcile the K8sControllerManager based on the status of the StatefulSet.
+	// Mark the K8sControllerManager as Ready if the StatefulSet is ready
 	if nkcmSts.Status.ReadyReplicas == nkcmSts.Status.Replicas {
-		log.Info("The NestedControllerManager StatefulSet is ready")
+		log.Info("The K8sControllerManager StatefulSet is ready")
 		if !IsComponentReady(nkcm.Status.CommonStatus) {
-			// As the NestedControllerManager StatefulSet is ready, update
-			// NestedControllerManager status
+			// As the K8sControllerManager StatefulSet is ready, update
+			// K8sControllerManager status
 			nkcm.Status.Phase = string(controlplanev1.Ready)
 			log.V(5).Info("The corresponding statefulset is ready, " +
-				"will mark the NestedControllerManager as ready")
+				"will mark the K8sControllerManager as ready")
 			if err := r.Status().Update(ctx, &nkcm); err != nil {
-				log.Error(err, "fail to update NestedControllerManager Object")
+				log.Error(err, "fail to update K8sControllerManager Object")
 				return ctrl.Result{}, err
 			}
-			log.Info("Successfully set the NestedControllerManager object to ready")
+			log.Info("Successfully set the K8sControllerManager object to ready")
 		}
 		return ctrl.Result{}, nil
 	}
 
-	// mark the NestedControllerManager as unready, if the NestedControllerManager
+	// mark the K8sControllerManager as unready, if the K8sControllerManager
 	// StatefulSet is unready,
 	if IsComponentReady(nkcm.Status.CommonStatus) {
 		nkcm.Status.Phase = string(controlplanev1.Unready)
 		if err := r.Status().Update(ctx, &nkcm); err != nil {
-			log.Error(err, "fail to update NestedControllerManager Object")
+			log.Error(err, "fail to update K8sControllerManager Object")
 			return ctrl.Result{}, err
 		}
-		log.Info("Successfully set the NestedControllerManager object to unready")
+		log.Info("Successfully set the K8sControllerManager object to unready")
 	}
 
 	return ctrl.Result{}, nil
@@ -161,7 +161,7 @@ func (r *NestedControllerManagerReconciler) SetupWithManager(mgr ctrl.Manager) e
 			if owner == nil {
 				return nil
 			}
-			// make sure it's a NestedControllerManager
+			// make sure it's a K8sControllerManager
 			if owner.APIVersion != controlplanev1.GroupVersion.String() ||
 				owner.Kind != string(controlplanev1.ControllerManager) {
 				return nil
@@ -173,7 +173,7 @@ func (r *NestedControllerManagerReconciler) SetupWithManager(mgr ctrl.Manager) e
 		return err
 	}*/
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&controlplanev1.NestedControllerManager{}).
+		For(&controlplanev1.K8sControllerManager{}).
 		Owns(&appsv1.StatefulSet{}).
 		Complete(r)
 }

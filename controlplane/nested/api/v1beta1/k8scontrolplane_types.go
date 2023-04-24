@@ -41,7 +41,7 @@ type K8sControlPlaneSpec struct {
 	// +optional
 	APIServerRef *corev1.ObjectReference `json:"apiserver,omitempty"`
 
-	// ContollerManagerRef is the reference to the NestedControllerManager.
+	// ContollerManagerRef is the reference to the K8sControllerManager.
 	// +optional
 	ControllerManagerRef *corev1.ObjectReference `json:"controllerManager,omitempty"`
 }

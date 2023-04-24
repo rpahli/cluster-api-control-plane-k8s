@@ -66,7 +66,7 @@ func (r *NestedControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		For(&controlplanev1.K8sControlPlane{}).
 		Owns(&controlplanev1.NestedEtcd{}).
 		Owns(&controlplanev1.K8sAPIServer{}).
-		Owns(&controlplanev1.NestedControllerManager{}).
+		Owns(&controlplanev1.K8sControllerManager{}).
 		Complete(r)
 }
 
@@ -213,9 +213,9 @@ func (r *NestedControlPlaneReconciler) reconcile(ctx context.Context, log logr.L
 	addOwners := []client.Object{}
 	isReady := []int{}
 	nestedComponents := map[client.Object]*corev1.ObjectReference{
-		&controlplanev1.NestedEtcd{}:              ncp.Spec.EtcdRef,
-		&controlplanev1.K8sAPIServer{}:            ncp.Spec.APIServerRef,
-		&controlplanev1.NestedControllerManager{}: ncp.Spec.ControllerManagerRef,
+		&controlplanev1.NestedEtcd{}:           ncp.Spec.EtcdRef,
+		&controlplanev1.K8sAPIServer{}:         ncp.Spec.APIServerRef,
+		&controlplanev1.K8sControllerManager{}: ncp.Spec.ControllerManagerRef,
 	}
 
 	// generate manifests by calling the kubeadm
