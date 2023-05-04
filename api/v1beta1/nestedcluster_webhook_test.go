@@ -29,22 +29,22 @@ func TestNestedCluster_ValidateUpdate(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		old     *NestedCluster
-		new     *NestedCluster
+		old     *K8sCluster
+		new     *K8sCluster
 		wantErr bool
 	}{
 		{
-			name: "NestedCluster with immutable spec",
-			old: &NestedCluster{
-				Spec: NestedClusterSpec{
+			name: "K8sCluster with immutable spec",
+			old: &K8sCluster{
+				Spec: K8sClusterSpec{
 					ControlPlaneEndpoint: clusterv1.APIEndpoint{
 						Host: "foo",
 						Port: 6443,
 					},
 				},
 			},
-			new: &NestedCluster{
-				Spec: NestedClusterSpec{
+			new: &K8sCluster{
+				Spec: K8sClusterSpec{
 					ControlPlaneEndpoint: clusterv1.APIEndpoint{
 						Host: "bar",
 						Port: 6443,
@@ -54,9 +54,9 @@ func TestNestedCluster_ValidateUpdate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "NestedCluster with mutable metadata",
-			old: &NestedCluster{
-				Spec: NestedClusterSpec{
+			name: "K8sCluster with mutable metadata",
+			old: &K8sCluster{
+				Spec: K8sClusterSpec{
 					ControlPlaneEndpoint: clusterv1.APIEndpoint{
 						Host: "foo",
 						Port: 6443,
@@ -66,8 +66,8 @@ func TestNestedCluster_ValidateUpdate(t *testing.T) {
 					Name: "foo",
 				},
 			},
-			new: &NestedCluster{
-				Spec: NestedClusterSpec{
+			new: &K8sCluster{
+				Spec: K8sClusterSpec{
 					ControlPlaneEndpoint: clusterv1.APIEndpoint{
 						Host: "foo",
 						Port: 6443,

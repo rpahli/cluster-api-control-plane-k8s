@@ -5,19 +5,19 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
-  name: nestedclusters.infrastructure.cluster.x-k8s.io
+  name: k8sclusters.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
   names:
     categories:
     - capi
     - capn
-    kind: NestedCluster
-    listKind: NestedClusterList
-    plural: nestedclusters
+    kind: K8sCluster
+    listKind: K8sClusterList
+    plural: k8sclusters
     shortNames:
     - nc
-    singular: nestedcluster
+    singular: k8scluster
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -30,7 +30,7 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: NestedCluster is the Schema for the nestedclusters API.
+        description: K8sCluster is the Schema for the nestedclusters API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -45,7 +45,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: NestedClusterSpec defines the desired state of NestedCluster.
+            description: K8sClusterSpec defines the desired state of K8sCluster.
             properties:
               controlPlaneEndpoint:
                 description: ControlPlaneEndpoint represents the endpoint used to
@@ -66,7 +66,7 @@ spec:
                 type: string
             type: object
           status:
-            description: NestedClusterStatus defines the observed state of NestedCluster.
+            description: K8sClusterStatus defines the observed state of K8sCluster.
             properties:
               ready:
                 description: Ready is when the NestedControlPlane has a API server

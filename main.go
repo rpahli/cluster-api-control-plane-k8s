@@ -36,7 +36,6 @@ import (
 
 	infrastructurev1 "sigs.k8s.io/cluster-api-provider-nested/api/v1beta1"
 	"sigs.k8s.io/cluster-api-provider-nested/controllers"
-	controlplanev1 "sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/api/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -60,14 +59,14 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
-	utilruntime.Must(controlplanev1.AddToScheme(scheme))
+	// utilruntime.Must(controlplanev1.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
 // InitFlags initializes the flags.
 func InitFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&metricsAddr, "metrics-bind-address", ":8080",
+	fs.StringVar(&metricsAddr, "metrics-bind-address", ":8081",
 		"The address the metric endpoint binds to.")
 
 	fs.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -94,7 +93,7 @@ func InitFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&nestedclusterConcurrency, "nestedcluster-concurrency", 10,
 		"Number of NestedClusters to process simultaneously")
 
-	fs.StringVar(&healthAddr, "health-addr", ":9440",
+	fs.StringVar(&healthAddr, "health-addr", ":9441",
 		"The address the health endpoint binds to.")
 
 	feature.MutableGates.AddFlag(fs)
@@ -137,28 +136,47 @@ func main() {
 	ctx := ctrl.SetupSignalHandler()
 
 	// Setup health checks.
-	if err := mgr.AddReadyzCheck("webhook", mgr.GetWebhookServer().StartedChecker()); err != nil {
-		setupLog.Error(err, "unable to create ready check")
-		os.Exit(1)
-	}
-	if err := mgr.AddHealthzCheck("webhook", mgr.GetWebhookServer().StartedChecker()); err != nil {
-		setupLog.Error(err, "unable to create health check")
-		os.Exit(1)
-	}
+	/*	if err := mgr.AddReadyzCheck("webhook", mgr.GetWebhookServer().StartedChecker()); err != nil {
+			setupLog.Error(err, "unable to create ready check")
+			os.Exit(1)
+		}
+		if err := mgr.AddHealthzCheck("webhook", mgr.GetWebhookServer().StartedChecker()); err != nil {
+			setupLog.Error(err, "unable to create health check")
+			os.Exit(1)
+		}*/
 
-	if err = (&controllers.NestedClusterReconciler{
+	if err = (&controllers.K8sClusterReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("infrastructure").WithName("NestedCluster"),
+		Log:    ctrl.Log.WithName("controllers").WithName("infrastructure").WithName("K8sCluster"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(ctx, mgr, concurrency(nestedclusterConcurrency)); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "NestedCluster")
+		setupLog.Error(err, "unable to create controller", "controller", "K8sCluster")
 		os.Exit(1)
 	}
 
-	if err := (&infrastructurev1.NestedCluster{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "NestedCluster")
+	if err = (&controllers.K8sMachineTemplateReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("infrastructure").WithName("K8sMachineTemplate"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(ctx, mgr, concurrency(nestedclusterConcurrency)); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "K8sMachineTemplate")
 		os.Exit(1)
 	}
+
+	if err = (&controllers.K8sMachineReconciler{
+		Client:    mgr.GetClient(),
+		Log:       ctrl.Log.WithName("controllers").WithName("infrastructure").WithName("K8sMachine"),
+		APIReader: mgr.GetAPIReader(),
+		Scheme:    mgr.GetScheme(),
+	}).SetupWithManager(ctx, mgr, concurrency(nestedclusterConcurrency)); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "K8sMachine")
+		os.Exit(1)
+	}
+
+	/*	if err := (&infrastructurev1.K8sCluster{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "K8sCluster")
+		os.Exit(1)
+	}*/
 
 	// +kubebuilder:scaffold:builder
 

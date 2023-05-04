@@ -29,7 +29,7 @@ import (
 // NestedclusterImmutableMsg ...
 const NestedclusterImmutableMsg = "Nestedclusters spec field is immutable. Please create a new resource instead. Ref doc: https://cluster-api.sigs.k8s.io/tasks/change-machine-template.html"
 
-func (r *NestedCluster) SetupWebhookWithManager(mgr manager.Manager) error {
+func (r *K8sCluster) SetupWebhookWithManager(mgr manager.Manager) error {
 	return builder.WebhookManagedBy(mgr).
 		For(r).
 		Complete()
@@ -37,17 +37,17 @@ func (r *NestedCluster) SetupWebhookWithManager(mgr manager.Manager) error {
 
 // +kubebuilder:webhook:verbs=create;update,path=/validate-infrastructure-cluster-x-k8s-io-v1alpha4-nestedcluster,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=nestedclusters,versions=v1alpha4,name=validation.nestedclusters.infrastructure.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
 
-var _ webhook.Validator = &NestedCluster{}
+var _ webhook.Validator = &K8sCluster{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (r *NestedCluster) ValidateCreate() error {
+func (r *K8sCluster) ValidateCreate() error {
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *NestedCluster) ValidateUpdate(old runtime.Object) error {
+func (r *K8sCluster) ValidateUpdate(old runtime.Object) error {
 	var allErrs field.ErrorList
-	oldNestedcluster := old.(*NestedCluster)
+	oldNestedcluster := old.(*K8sCluster)
 
 	if !reflect.DeepEqual(r.Spec, oldNestedcluster.Spec) {
 		allErrs = append(allErrs,
@@ -63,6 +63,6 @@ func (r *NestedCluster) ValidateUpdate(old runtime.Object) error {
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (r *NestedCluster) ValidateDelete() error {
+func (r *K8sCluster) ValidateDelete() error {
 	return nil
 }

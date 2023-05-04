@@ -44,12 +44,13 @@ import (
 
 	controlplanev1 "sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/api/v1beta1"
 	"sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/kubeadm"
+	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
 )
 
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters,verbs=get;list;watch
-// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=nestedcontrolplanes,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=nestedcontrolplanes/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=nestedcontrollermanagers/finalizers,verbs=update
+// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=k8scontrolplanes,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=k8scontrolplanes/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=k8scontrollermanagers/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete.
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete.
 
@@ -64,7 +65,6 @@ type NestedControlPlaneReconciler struct {
 func (r *NestedControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&controlplanev1.K8sControlPlane{}).
-		Owns(&controlplanev1.NestedEtcd{}).
 		Owns(&controlplanev1.K8sAPIServer{}).
 		Owns(&controlplanev1.K8sControllerManager{}).
 		Complete(r)
@@ -187,7 +187,14 @@ func patchControlPlane(ctx context.Context, patchHelper *patch.Helper, ncp *cont
 func (r *NestedControlPlaneReconciler) reconcile(ctx context.Context, log logr.Logger, cluster *clusterv1.Cluster, ncp *controlplanev1.K8sControlPlane) (res ctrl.Result, reterr error) {
 	log.Info("Reconcile K8sControlPlane")
 
-	certificates := secret.NewCertificatesForInitialControlPlane(nil)
+	// Generate Cluster Certificates if needed
+	config := ncp.Spec.KubeadmConfigSpec.DeepCopy()
+	config.JoinConfiguration = nil
+	if config.ClusterConfiguration == nil {
+		config.ClusterConfiguration = &bootstrapv1.ClusterConfiguration{}
+	}
+
+	certificates := secret.NewCertificatesForInitialControlPlane(config.ClusterConfiguration)
 	controllerRef := metav1.NewControllerRef(ncp, controlplanev1.GroupVersion.WithKind("K8sControlPlane"))
 	if err := certificates.LookupOrGenerate(ctx, r.Client, util.ObjectKey(cluster), *controllerRef); err != nil {
 		log.Error(err, "unable to lookup or create cluster certificates")
@@ -213,7 +220,6 @@ func (r *NestedControlPlaneReconciler) reconcile(ctx context.Context, log logr.L
 	addOwners := []client.Object{}
 	isReady := []int{}
 	nestedComponents := map[client.Object]*corev1.ObjectReference{
-		&controlplanev1.NestedEtcd{}:           ncp.Spec.EtcdRef,
 		&controlplanev1.K8sAPIServer{}:         ncp.Spec.APIServerRef,
 		&controlplanev1.K8sControllerManager{}: ncp.Spec.ControllerManagerRef,
 	}

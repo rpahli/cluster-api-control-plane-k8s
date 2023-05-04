@@ -224,14 +224,6 @@ func genStatefulSetObject(
 		"Replicas fields are set",
 		"StatefulSet", ncSts.GetName())
 
-	// 4. set the "--initial-cluster" command line flag for the Etcd container
-	if ncKind == kubeadm.Etcd {
-		icaVal := genInitialClusterArgs(1, clusterName, clusterName, ncMeta.GetNamespace())
-		ncSts.Spec.Template.Spec.Containers[0].Command = append(
-			ncSts.Spec.Template.Spec.Containers[0].Command,
-			fmt.Sprintf("--initial-cluster=%s", icaVal))
-		log.V(5).Info("The '--initial-cluster' command line option is set")
-	}
 	return ncSts, nil
 }
 

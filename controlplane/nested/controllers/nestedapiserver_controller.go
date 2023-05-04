@@ -51,9 +51,9 @@ type NestedAPIServerReconciler struct {
 	WatchFilterValue string
 }
 
-// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=nestedapiservers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=nestedapiservers/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=nestedapiservers/finalizers,verbs=update
+// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=k8sapiservers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=k8sapiservers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=k8sapiservers/finalizers,verbs=update
 
 func (r *NestedAPIServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("nestedapiserver", req.NamespacedName)

@@ -64,7 +64,7 @@ rules:
 - apiGroups:
   - controlplane.cluster.x-k8s.io
   resources:
-  - nestedapiservers
+  - k8sapiservers
   verbs:
   - create
   - delete
@@ -76,13 +76,13 @@ rules:
 - apiGroups:
   - controlplane.cluster.x-k8s.io
   resources:
-  - nestedapiservers/finalizers
+  - k8sapiservers/finalizers
   verbs:
   - update
 - apiGroups:
   - controlplane.cluster.x-k8s.io
   resources:
-  - nestedapiservers/status
+  - k8sapiservers/status
   verbs:
   - get
   - patch
@@ -90,7 +90,7 @@ rules:
 - apiGroups:
   - controlplane.cluster.x-k8s.io
   resources:
-  - nestedcontrollermanagers
+  - k8scontrollermanagers
   verbs:
   - create
   - delete
@@ -102,13 +102,13 @@ rules:
 - apiGroups:
   - controlplane.cluster.x-k8s.io
   resources:
-  - nestedcontrollermanagers/finalizers
+  - k8scontrollermanagers/finalizers
   verbs:
   - update
 - apiGroups:
   - controlplane.cluster.x-k8s.io
   resources:
-  - nestedcontrollermanagers/status
+  - k8scontrollermanagers/status
   verbs:
   - get
   - patch
@@ -116,7 +116,7 @@ rules:
 - apiGroups:
   - controlplane.cluster.x-k8s.io
   resources:
-  - nestedcontrolplanes
+  - k8scontrolplanes
   verbs:
   - create
   - delete
@@ -128,33 +128,7 @@ rules:
 - apiGroups:
   - controlplane.cluster.x-k8s.io
   resources:
-  - nestedcontrolplanes/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - controlplane.cluster.x-k8s.io
-  resources:
-  - nestedetcds
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - controlplane.cluster.x-k8s.io
-  resources:
-  - nestedetcds/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - controlplane.cluster.x-k8s.io
-  resources:
-  - nestedetcds/status
+  - k8scontrolplanes/status
   verbs:
   - get
   - patch

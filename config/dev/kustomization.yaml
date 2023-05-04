@@ -1,0 +1,6 @@
+namespace: default
+resources:
+  - v1beta1_cluster.yaml
+  - kcp.yaml
+  -  mt-control-plane.yaml
+  # - controlplane_v1alpha4_nestedcontrolplane.yaml

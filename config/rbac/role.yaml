@@ -14,17 +14,9 @@ rules:
   - list
   - watch
 - apiGroups:
-  - controlplane.cluster.x-k8s.io
-  resources:
-  - nestedcontrolplanes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
-  - nestedclusters
+  - k8sclusters
   verbs:
   - create
   - delete
@@ -36,13 +28,65 @@ rules:
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
-  - nestedclusters/finalizers
+  - k8sclusters/finalizers
   verbs:
   - update
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
-  - nestedclusters/status
+  - k8sclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - k8smachine
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - k8smachine/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - k8smachine/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - k8smachinetemplate
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - k8smachinetemplate/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - k8smachinetemplate/status
   verbs:
   - get
   - patch

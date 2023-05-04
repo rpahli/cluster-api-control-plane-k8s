@@ -1,0 +1,13 @@
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: K8sControlPlane
+metadata:
+  name: nestedcontrolplane-sample
+spec:
+  apiserver:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: K8sAPIServer
+    name: nestedapiserver-sample
+  controllerManager:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: K8sControllerManager
+    name: nestedcontrollermanager-sample

@@ -29,7 +29,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	infrastructurev1alpha4 "sigs.k8s.io/cluster-api-provider-nested/api/v1alpha4"
+	infrastructurev1alpha4 "sigs.k8s.io/cluster-api-provider-nested/api/v1beta1"
 	//+kubebuilder:scaffold:imports
 )
 

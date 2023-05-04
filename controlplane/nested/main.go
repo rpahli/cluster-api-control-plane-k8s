@@ -165,14 +165,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.NestedEtcdReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("controlplane").WithName("NestedEtcd"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "NestedEtcd")
-		os.Exit(1)
-	}
+	/*
+		if err = (&controllers.NestedEtcdReconciler{
+			Client: mgr.GetClient(),
+			Log:    ctrl.Log.WithName("controllers").WithName("controlplane").WithName("NestedEtcd"),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "NestedEtcd")
+			os.Exit(1)
+		}*/
 
 	if err = (&controllers.NestedAPIServerReconciler{
 		Client: mgr.GetClient(),

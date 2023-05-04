@@ -5,32 +5,22 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
-  name: nestedclusters.infrastructure.cluster.x-k8s.io
+  name: k8smachines.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
   names:
     categories:
-    - capi
-    - capn
-    kind: NestedCluster
-    listKind: NestedClusterList
-    plural: nestedclusters
-    shortNames:
-    - nc
-    singular: nestedcluster
+    - cluster-api
+    kind: K8sMachine
+    listKind: K8sMachineList
+    plural: k8smachines
+    singular: k8smachine
   scope: Namespaced
   versions:
-  - additionalPrinterColumns:
-    - jsonPath: .status.ready
-      name: Ready
-      type: boolean
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
-    name: v1beta1
+  - name: v1beta1
     schema:
       openAPIV3Schema:
-        description: NestedCluster is the Schema for the nestedclusters API.
+        description: K8sMachine is the Schema for the k8smachines API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -45,33 +35,26 @@ spec:
           metadata:
             type: object
           spec:
-            description: NestedClusterSpec defines the desired state of NestedCluster.
+            description: K8sMachineSpec defines the desired state of K8sMachine
             properties:
-              controlPlaneEndpoint:
-                description: ControlPlaneEndpoint represents the endpoint used to
-                  communicate with the control plane.
-                properties:
-                  host:
-                    description: The hostname on which the API server is serving.
-                    type: string
-                  port:
-                    description: The port on which the API server is serving.
-                    format: int32
-                    type: integer
-                required:
-                - host
-                - port
-                type: object
-              namespace:
+              customImage:
+                description: CustomImage allows customizing the container image that
+                  is used for running the machine
+                type: string
+              providerID:
+                description: ProviderID will be the container name in ProviderID format
+                  (docker:////<containername>)
                 type: string
             type: object
           status:
-            description: NestedClusterStatus defines the observed state of NestedCluster.
+            description: K8sMachineStatus defines the observed state of K8sMachine
             properties:
               ready:
-                description: Ready is when the NestedControlPlane has a API server
-                  URL.
+                description: Ready denotes that the machine (docker container) is
+                  ready
                 type: boolean
+            required:
+            - ready
             type: object
         type: object
     served: true

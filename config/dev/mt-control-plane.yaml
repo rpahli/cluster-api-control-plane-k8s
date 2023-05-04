@@ -1,0 +1,9 @@
+kind: K8sMachineTemplate
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+metadata:
+  name: "sample-control-plane"
+spec:
+  template:
+    spec:
+      providerID: "test"
+      customImage: "ubuntu-22.04"

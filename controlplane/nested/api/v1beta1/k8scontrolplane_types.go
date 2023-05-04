@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterkubeadmv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -29,11 +30,12 @@ import (
 const (
 	// K8sControlPlaneFinalizer is added to the K8sControlPlane to allow
 	// nested deletions to happen before the object is cleaned up.
-	K8sControlPlaneFinalizer = "k8s.controlplane.cluster.x-k8s.io"
+	K8sControlPlaneFinalizer = "k8s.infrastructure.cluster.x-k8s.io"
 )
 
 // K8sControlPlaneSpec defines the desired state of K8sControlPlane.
 type K8sControlPlaneSpec struct {
+	KubeadmConfigSpec *clusterkubeadmv1.KubeadmConfigSpec `json:"kubeadmConfigSpec,omitempty"`
 	// EtcdRef is the reference to the NestedEtcd.
 	EtcdRef *corev1.ObjectReference `json:"etcd,omitempty"`
 
@@ -48,11 +50,6 @@ type K8sControlPlaneSpec struct {
 
 // K8sControlPlaneStatus defines the observed state of K8sControlPlane.
 type K8sControlPlaneStatus struct {
-	// Etcd stores the connection information from the downstream etcd
-	// implementation if the NestedEtcd type isn't used this
-	// allows other component controllers to fetch the endpoints.
-	// +optional
-	Etcd *K8sControlPlaneStatusEtcd `json:"etcd,omitempty"`
 
 	// APIServer stores the connection information from the control plane
 	// this should contain anything shared between control plane components.
@@ -75,13 +72,6 @@ type K8sControlPlaneStatus struct {
 
 	// Conditions specifies the conditions for the managed control plane
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
-}
-
-// K8sControlPlaneStatusEtcd defines the status of the etcd component to
-// allow other component controllers to take over the deployment.
-type K8sControlPlaneStatusEtcd struct {
-	// Addresses defines how to address the etcd instance
-	Addresses []NestedEtcdAddress `json:"addresses,omitempty"`
 }
 
 // K8sControlPlaneStatusAPIServer defines the status of the APIServer
