@@ -4,12 +4,12 @@ metadata:
   name: cluster-sample
   namespace: default
 spec:
-  controlPlaneEndpoint:
+  #controlPlaneEndpoint:
     # currently this has to be the in-cluster endpoint, the in-cluster
     # kubeconfig is used by controller-manager w/ ClusterIP services
     # we can `port-forward` this service and be able to test
-    host: "cluster-sample-apiserver"
-    port: 6443
+    #host: "cluster-sample-apiserver"
+    #port: 6443
   controlPlaneRef:
     apiVersion: controlplane.cluster.x-k8s.io/v1beta1
     kind: KubeadmControlPlane
@@ -27,5 +27,5 @@ metadata:
   name: nestedcluster-sample
 spec:
   controlPlaneEndpoint:
-    host: "localhost"
+    host: "test"
     port: 6443

@@ -21,6 +21,8 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
+	"sync"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -34,7 +36,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
-	infrastructurev1 "sigs.k8s.io/cluster-api-provider-nested/api/v1beta1"
+	infrastructurev1 "sigs.k8s.io/cluster-api-provider-nested/api/infrastructure/v1beta1"
 	"sigs.k8s.io/cluster-api-provider-nested/controllers"
 	// +kubebuilder:scaffold:imports
 )
@@ -59,7 +61,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
-	// utilruntime.Must(controlplanev1.AddToScheme(scheme))
+	utilruntime.Must(bootstrapv1.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
@@ -145,12 +147,28 @@ func main() {
 			os.Exit(1)
 		}*/
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	if err = (&controllers.K8sClusterReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("infrastructure").WithName("K8sCluster"),
-		Scheme: mgr.GetScheme(),
+		Client:                         mgr.GetClient(),
+		Log:                            ctrl.Log.WithName("controllers").WithName("infrastructure").WithName("K8sCluster"),
+		APIReader:                      mgr.GetAPIReader(),
+		Scheme:                         mgr.GetScheme(),
+		TargetClusterManagersWaitGroup: &wg,
 	}).SetupWithManager(ctx, mgr, concurrency(nestedclusterConcurrency)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "K8sCluster")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.K8sControlPlaneReconciler{
+		Client:                         mgr.GetClient(),
+		Log:                            ctrl.Log.WithName("controllers").WithName("controlplane").WithName("K8sControlPlane"),
+		APIReader:                      mgr.GetAPIReader(),
+		Scheme:                         mgr.GetScheme(),
+		TargetClusterManagersWaitGroup: &wg,
+	}).SetupWithManager(ctx, mgr, concurrency(nestedclusterConcurrency)); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "K8sControlPlane")
 		os.Exit(1)
 	}
 

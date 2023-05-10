@@ -28,6 +28,7 @@ import (
 	_ "github.com/onsi/ginkgo/v2/ginkgo"
 	_ "github.com/raviqqe/liche"
 	_ "k8s.io/code-generator/cmd/conversion-gen"
+	_ "k8s.io/code-generator/cmd/defaulter-gen"
 	_ "sigs.k8s.io/cluster-api/hack/tools/release"
 	_ "sigs.k8s.io/controller-tools/cmd/controller-gen"
 	_ "sigs.k8s.io/testing_frameworks/integration"

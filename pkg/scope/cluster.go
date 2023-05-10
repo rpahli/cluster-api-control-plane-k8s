@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	infrav1 "sigs.k8s.io/cluster-api-provider-nested/api/v1beta1"
+	infrav1 "sigs.k8s.io/cluster-api-provider-nested/api/infrastructure/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -90,9 +90,56 @@ func (s *ClusterScope) Close(ctx context.Context) error {
 	return s.patchHelper.Patch(ctx, s.K8sCluster)
 }
 
+// PatchObject persists the machine spec and status.
+func (s *ClusterScope) PatchObject(ctx context.Context) error {
+	return s.patchHelper.Patch(ctx, s.K8sCluster)
+}
+
 // ControlPlaneAPIEndpointPort returns the Port of the Kube-api server.
 func (s *ClusterScope) ControlPlaneAPIEndpointPort() int32 {
 	return int32(0) // s.K8sCluster.Spec.ControlPlaneLoadBalancer.Port)
+}
+
+// ListMachines returns K8sMachines.
+func (s *ClusterScope) ListMachines(ctx context.Context) ([]*clusterv1.Machine, []*infrav1.K8sMachine, error) {
+	// get and index Machines by K8sMachines name
+	var machineListRaw clusterv1.MachineList
+	machineByK8sMachineName := make(map[string]*clusterv1.Machine)
+	if err := s.Client.List(ctx, &machineListRaw, client.InNamespace(s.Namespace())); err != nil {
+		return nil, nil, err
+	}
+	expectedGK := infrav1.GroupVersion.WithKind("K8sMachine").GroupKind()
+	for pos := range machineListRaw.Items {
+		m := &machineListRaw.Items[pos]
+		actualGK := m.Spec.InfrastructureRef.GroupVersionKind().GroupKind()
+		if m.Spec.ClusterName != s.Cluster.Name ||
+			actualGK.String() != expectedGK.String() {
+			continue
+		}
+		machineByK8sMachineName[m.Spec.InfrastructureRef.Name] = m
+	}
+
+	// match K8sMachines to Machines
+	var k8sMachineListRaw infrav1.K8sMachineList
+	if err := s.Client.List(ctx, &k8sMachineListRaw, client.InNamespace(s.Namespace())); err != nil {
+		return nil, nil, err
+	}
+
+	machineList := make([]*clusterv1.Machine, 0, len(k8sMachineListRaw.Items))
+	k8sMachineList := make([]*infrav1.K8sMachine, 0, len(k8sMachineListRaw.Items))
+
+	for pos := range k8sMachineListRaw.Items {
+		hm := &k8sMachineListRaw.Items[pos]
+		m, ok := machineByK8sMachineName[hm.Name]
+		if !ok {
+			continue
+		}
+
+		machineList = append(machineList, m)
+		k8sMachineList = append(k8sMachineList, hm)
+	}
+
+	return machineList, k8sMachineList, nil
 }
 
 // IsControlPlaneReady returns if a machine is a control-plane.

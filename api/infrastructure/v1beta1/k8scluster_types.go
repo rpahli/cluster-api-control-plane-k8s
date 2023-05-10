@@ -21,6 +21,13 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
+const (
+	// ClusterFinalizer allows ReconcileHetznerCluster to clean up HCloud
+	// resources associated with HetznerCluster before removing it from the
+	// apiserver.
+	ClusterFinalizer = "k8scluster.infrastructure.cluster.x-k8s.io"
+)
+
 // K8sClusterSpec defines the desired state of K8sCluster.
 type K8sClusterSpec struct {
 	// ControlPlaneEndpoint represents the endpoint used to communicate with the control plane.
@@ -33,7 +40,8 @@ type K8sClusterSpec struct {
 type K8sClusterStatus struct {
 	// Ready is when the NestedControlPlane has a API server URL.
 	// +optional
-	Ready bool `json:"ready,omitempty"`
+	Ready      bool                 `json:"ready,omitempty"`
+	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -59,6 +67,16 @@ type K8sClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []K8sCluster `json:"items"`
+}
+
+// GetConditions returns the observations of the operational state of the HetznerCluster resource.
+func (r *K8sCluster) GetConditions() clusterv1.Conditions {
+	return r.Status.Conditions
+}
+
+// SetConditions sets the underlying service state of the HetznerCluster to the predescribed clusterv1.Conditions.
+func (r *K8sCluster) SetConditions(conditions clusterv1.Conditions) {
+	r.Status.Conditions = conditions
 }
 
 func init() {

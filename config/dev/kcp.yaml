@@ -39,7 +39,7 @@ spec:
           requestheader-username-headers: X-Remote-User
           enable-aggregator-routing: "true"
           # Etcd Secret Encrytion
-          encryption-provider-config: /etc/kubernetes/encryption-provider.yaml
+          # encryption-provider-config: /etc/kubernetes/encryption-provider.yaml
           # Additional Configuration
           cloud-provider: external
           authorization-mode: "Node,RBAC"

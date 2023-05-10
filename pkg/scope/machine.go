@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	infrav1 "sigs.k8s.io/cluster-api-provider-nested/api/v1beta1"
+	infrav1 "sigs.k8s.io/cluster-api-provider-nested/api/infrastructure/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 )
@@ -14,6 +14,7 @@ type MachineScopeParams struct {
 	ClusterScopeParams
 	Machine    *clusterv1.Machine
 	K8sMachine *infrav1.K8sMachine
+	Namespace  string
 }
 
 // NewMachineScope creates a new Scope from the supplied parameters.
@@ -40,6 +41,7 @@ func NewMachineScope(ctx context.Context, params MachineScopeParams) (*MachineSc
 		ClusterScope: *cs,
 		Machine:      params.Machine,
 		K8sMachine:   params.K8sMachine,
+		Namespace:    params.Namespace,
 	}, nil
 }
 
@@ -48,6 +50,17 @@ type MachineScope struct {
 	ClusterScope
 	Machine    *clusterv1.Machine
 	K8sMachine *infrav1.K8sMachine
+	Namespace  string
+}
+
+// SetReady sets the ready field on the machine.
+func (m *MachineScope) SetReady(ready bool) {
+	m.K8sMachine.Status.Ready = ready
+}
+
+// Close closes the current scope persisting the cluster configuration and status.
+func (m *MachineScope) Close(ctx context.Context) error {
+	return m.patchHelper.Patch(ctx, m.K8sMachine)
 }
 
 // PatchObject persists the machine spec and status.

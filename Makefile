@@ -162,6 +162,7 @@ generate-go: $(CONTROLLER_GEN) ## Runs Go related generate targets
 	go generate ./...
 	$(MAKE) generate-go-infrastructure
 	$(MAKE) generate-go-controlplane
+	$(MAKE) generate-go-kubeadm
 
 .PHONY: generate-go-infrastructure
 generate-go-infrastructure: $(CONTROLLER_GEN)
@@ -173,6 +174,11 @@ generate-go-controlplane: $(CONTROLLER_GEN)
 	$(CONTROLLER_GEN) \
 		object:headerFile=./hack/boilerplate/boilerplate.generatego.txt \
 		paths=./controlplane/nested/api/...
+
+generate-go-kubeadm: $(CONTROLLER_GEN)
+	$(CONTROLLER_GEN) \
+		object:headerFile=./hack/boilerplate/boilerplate.generatego.txt \
+		paths=./pkg/kubeadm/api/...
 
 .PHONY: generate-manifests
 generate-manifests: $(CONTROLLER_GEN) ## Generate manifests e.g. CRD, RBAC etc.

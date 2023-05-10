@@ -19,7 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-	infrav1 "sigs.k8s.io/cluster-api-provider-nested/api/v1beta1"
+	infrav1 "sigs.k8s.io/cluster-api-provider-nested/api/infrastructure/v1beta1"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"

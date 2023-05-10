@@ -1,6 +1,8 @@
 namespace: default
 resources:
   - v1beta1_cluster.yaml
-  - kcp.yaml
+  - k8s_kcp.yaml
   -  mt-control-plane.yaml
   # - controlplane_v1alpha4_nestedcontrolplane.yaml
+  - etcd-statefulset.yaml
+  - etcd-service.yaml

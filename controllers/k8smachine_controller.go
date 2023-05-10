@@ -7,7 +7,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
-	infrav1 "sigs.k8s.io/cluster-api-provider-nested/api/v1beta1"
+	infrav1 "sigs.k8s.io/cluster-api-provider-nested/api/infrastructure/v1beta1"
 	"sigs.k8s.io/cluster-api-provider-nested/pkg/scope"
 	server "sigs.k8s.io/cluster-api-provider-nested/pkg/services"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -101,6 +101,10 @@ func (r *K8sMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return hcloudTokenErrorResult(ctx, err, k8sMachine, infrav1.InstanceReadyCondition, r.Client)
 		}*/
 
+	// namespace := "default"
+
+	// secretManager.FindSecret(ctx, types.NamespacedName{Name: "", Namespace: })
+
 	machineScope, err := scope.NewMachineScope(ctx, scope.MachineScopeParams{
 		ClusterScopeParams: scope.ClusterScopeParams{
 			Client:     r.Client,
@@ -111,6 +115,7 @@ func (r *K8sMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		},
 		Machine:    machine,
 		K8sMachine: k8sMachine,
+		Namespace:  "default",
 	})
 
 	// Always close the scope when exiting this function so we can persist any HCloudMachine changes.
@@ -161,13 +166,17 @@ func (r *K8sMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 		return reconcile.Result{}, err
 	}
 
+	/*	_, err := kubeadm.GenerateTemplates(r.Log, machineScope.Cluster.Name)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to reconcile server for HCloudMachine %s/%s: %w",
+				hcloudMachine.Namespace, hcloudMachine.Name, err)
+		}*/
 	// reconcile server
 	result, err := server.NewService(machineScope).Reconcile(ctx)
 	if err != nil {
 		return result, fmt.Errorf("failed to reconcile server for HCloudMachine %s/%s: %w",
 			hcloudMachine.Namespace, hcloudMachine.Name, err)
 	}
-
 	return result, nil
 }
 

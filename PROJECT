@@ -13,4 +13,13 @@ resources:
   kind: NestedCluster
   path: sigs.k8s.io/cluster-api-provider-nested/api/v1alpha4
   version: v1alpha4
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8s.io
+  group: kubeadm
+  kind: NestedCluster
+  path: sigs.k8s.io/cluster-api-provider-nested/pkg/kubeadm/api
+  version: v1beta3
 version: "3"

@@ -28,24 +28,30 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/cluster-api-provider-nested/pkg/scope"
+	"sigs.k8s.io/cluster-api-provider-nested/pkg/services/loadbalancer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
+	"sigs.k8s.io/cluster-api/util/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"strings"
 	"sync"
 	"time"
 
-	infrav1 "sigs.k8s.io/cluster-api-provider-nested/api/v1beta1"
+	infrav1 "sigs.k8s.io/cluster-api-provider-nested/api/infrastructure/v1beta1"
 )
 
-// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters,verbs=get;list;watch
+//+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters,verbs=get;list;watch
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=k8sclusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=k8sclusters/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=k8sclusters/finalizers,verbs=update
@@ -53,6 +59,7 @@ import (
 // K8sClusterReconciler reconciles a K8sCluster object.
 type K8sClusterReconciler struct {
 	client.Client
+	APIReader                      client.Reader
 	Log                            logr.Logger
 	WatchFilterValue               string
 	targetClusterManagersStopCh    map[types.NamespacedName]chan struct{}
@@ -87,8 +94,6 @@ func (r *K8sClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 			if !ok {
 				panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
 			}
-
-			log := log.WithValues("objectMapper", "clusterToNestedCluster", "namespace", c.Namespace, "cluster", c.Name)
 
 			// Don't handle deleted clusters
 			if !c.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -129,24 +134,14 @@ func (r *K8sClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 			}
 		}),
 	)
-
 }
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the K8sCluster object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
-func (r *K8sClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *K8sClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	// Fetch the HetznerCluster instance
-	hetznerCluster := &infrav1.K8sCluster{}
-	err := r.Get(ctx, req.NamespacedName, hetznerCluster)
+	// Fetch the K8sCluster instance
+	k8sCluster := &infrav1.K8sCluster{}
+	err := r.Get(ctx, req.NamespacedName, k8sCluster)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
@@ -154,10 +149,10 @@ func (r *K8sClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return reconcile.Result{}, err
 	}
 
-	log = log.WithValues("K8sCluster", klog.KObj(hetznerCluster))
+	log = log.WithValues("K8sCluster", klog.KObj(k8sCluster))
 
 	// Fetch the Cluster.
-	cluster, err := util.GetOwnerCluster(ctx, r.Client, hetznerCluster.ObjectMeta)
+	cluster, err := util.GetOwnerCluster(ctx, r.Client, k8sCluster.ObjectMeta)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get owner cluster: %w", err)
 	}
@@ -172,18 +167,90 @@ func (r *K8sClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}, nil
 	}
 
-	if annotations.IsPaused(cluster, hetznerCluster) {
-		log.Info("HetznerCluster or linked Cluster is marked as paused. Won't reconcileNormal")
+	if annotations.IsPaused(cluster, k8sCluster) {
+		log.Info("K8sCluster or linked Cluster is marked as paused. Won't reconcileNormal")
 		return reconcile.Result{}, nil
 	}
 
-	if !hetznerCluster.Status.Ready {
-		hetznerCluster.Status.Ready = true
-		if err := r.Status().Update(ctx, hetznerCluster); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, nil
+	clusterScope, err := scope.NewClusterScope(ctx, scope.ClusterScopeParams{
+		Client:     r.Client,
+		APIReader:  r.APIReader,
+		Logger:     log,
+		Cluster:    cluster,
+		K8sCluster: k8sCluster,
+	})
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to create scope: %w", err)
 	}
+
+	// Always close the scope when exiting this function so we can persist any K8sCluster changes.
+	defer func() {
+		if err := clusterScope.Close(ctx); err != nil && reterr == nil {
+			reterr = err
+		}
+	}()
+
+	// check whether rate limit has been reached and if so, then wait.
+	if wait := reconcileRateLimit(k8sCluster); wait {
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
+	// Handle deleted clusters
+	if !k8sCluster.DeletionTimestamp.IsZero() {
+		return r.reconcileDelete(ctx, clusterScope)
+	}
+
+	// Handle non-deleted clusters
+	return r.reconcileNormal(ctx, clusterScope)
+}
+
+func (r *K8sClusterReconciler) reconcileNormal(ctx context.Context, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
+	k8sCluster := clusterScope.K8sCluster
+	// If the K8sCluster doesn't have our finalizer, add it.
+	controllerutil.AddFinalizer(k8sCluster, infrav1.ClusterFinalizer)
+	if err := clusterScope.PatchObject(ctx); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// reconcile the load balancers
+	if err := loadbalancer.NewService(clusterScope).Reconcile(ctx); err != nil {
+		conditions.MarkFalse(k8sCluster, infrav1.LoadBalancerAttached, infrav1.LoadBalancerUnreachableReason, clusterv1.ConditionSeverityError, err.Error())
+		return reconcile.Result{}, fmt.Errorf("failed to reconcile load balancers for K8sCluster %s/%s: %w", k8sCluster.Namespace, k8sCluster.Name, err)
+	}
+	conditions.MarkTrue(k8sCluster, infrav1.LoadBalancerAttached)
+
+	if !k8sCluster.Status.Ready {
+		k8sCluster.Status.Ready = true
+	}
+
+	// create service with load balancer
+	return reconcile.Result{}, nil
+}
+
+func (r *K8sClusterReconciler) reconcileDelete(ctx context.Context, clusterScope *scope.ClusterScope) (reconcile.Result, error) {
+	k8sCluster := clusterScope.K8sCluster
+
+	// wait for all k8sMachines to be deleted
+	machines, _, err := clusterScope.ListMachines(ctx)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to list machines for K8sCluster %s/%s: %w", k8sCluster.Namespace, k8sCluster.Name, err)
+	}
+	if len(machines) > 0 {
+		names := make([]string, len(machines))
+		for i, m := range machines {
+			names[i] = fmt.Sprintf("machine/%s", m.Name)
+		}
+		record.Eventf(
+			k8sCluster,
+			"WaitingForMachineDeletion",
+			"Machines %s still running, waiting with deletion of K8sCluster",
+			strings.Join(names, ", "),
+		)
+		return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
+	}
+
+	// Cluster is deleted so remove the finalizer.
+	controllerutil.RemoveFinalizer(clusterScope.K8sCluster, infrav1.ClusterFinalizer)
 
 	return reconcile.Result{}, nil
 }

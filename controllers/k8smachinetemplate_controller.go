@@ -6,7 +6,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
-	controlplanev1 "sigs.k8s.io/cluster-api-provider-nested/api/v1beta1"
+	infrav1 "sigs.k8s.io/cluster-api-provider-nested/api/infrastructure/v1beta1"
 	"sigs.k8s.io/cluster-api-provider-nested/pkg/scope"
 	"sigs.k8s.io/cluster-api-provider-nested/pkg/services/machinetemplate"
 	"sigs.k8s.io/cluster-api/util"
@@ -33,7 +33,7 @@ type K8sMachineTemplateReconciler struct {
 
 func (r *K8sMachineTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
-	machineTemplate := &controlplanev1.K8sMachineTemplate{}
+	machineTemplate := &infrav1.K8sMachineTemplate{}
 	if err := r.Get(ctx, req.NamespacedName, machineTemplate); err != nil {
 		log.Error(err, "unable to fetch K8sMachineTemplate")
 		return reconcile.Result{}, client.IgnoreNotFound(err)
@@ -84,7 +84,7 @@ func (r *K8sMachineTemplateReconciler) Reconcile(ctx context.Context, req ctrl.R
 }
 
 func (r *K8sMachineTemplateReconciler) reconcileDelete(ctx context.Context, machineTemplateScope *scope.K8sMachineTemplateScope) (reconcile.Result, error) {
-	controllerutil.RemoveFinalizer(machineTemplateScope.K8sMachineTemplate, controlplanev1.MachineFinalizer)
+	controllerutil.RemoveFinalizer(machineTemplateScope.K8sMachineTemplate, infrav1.MachineFinalizer)
 	return reconcile.Result{}, nil
 }
 
@@ -92,7 +92,7 @@ func (r *K8sMachineTemplateReconciler) reconcileNormal(ctx context.Context, mach
 	hcloudMachineTemplate := machineTemplateScope.K8sMachineTemplate
 
 	// If the HCloudMachineTemplate doesn't have our finalizer, add it.
-	controllerutil.AddFinalizer(machineTemplateScope.K8sMachineTemplate, controlplanev1.MachineFinalizer)
+	controllerutil.AddFinalizer(machineTemplateScope.K8sMachineTemplate, infrav1.MachineFinalizer)
 
 	// Register the finalizer immediately to avoid orphaning HCloud resources on delete
 	if err := machineTemplateScope.PatchObject(ctx); err != nil {
@@ -112,7 +112,7 @@ func (r *K8sMachineTemplateReconciler) reconcileNormal(ctx context.Context, mach
 func (r *K8sMachineTemplateReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
-		For(&controlplanev1.K8sMachineTemplate{}).
+		For(&infrav1.K8sMachineTemplate{}).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
 		Complete(r)
 }
