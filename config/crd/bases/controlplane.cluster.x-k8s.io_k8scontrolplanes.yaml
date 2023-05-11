@@ -5,7 +5,7 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
-  name: k8scontrolplane.controlplane.cluster.x-k8s.io
+  name: k8scontrolplanes.controlplane.cluster.x-k8s.io
 spec:
   group: controlplane.cluster.x-k8s.io
   names:
@@ -14,7 +14,7 @@ spec:
     - capn
     kind: K8sControlPlane
     listKind: K8sControlPlaneList
-    plural: k8scontrolplane
+    plural: k8scontrolplanes
     shortNames:
     - nc
     singular: k8scontrolplane

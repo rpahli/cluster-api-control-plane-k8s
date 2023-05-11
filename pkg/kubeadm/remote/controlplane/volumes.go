@@ -47,6 +47,12 @@ func getInClusterVolumesForTheControlPlane(cfg *bootstrapv1.ClusterConfiguration
 	mounts := newControlPlaneHostPathMounts()
 	mounts.NewSecretMount(kubeadmconstants.KubeAPIServer, kubeadmconstants.KubeCertificatesVolumeName, controlPlaneSecret, cfg.CertificatesDir, true)
 	mounts.NewSecretMount(kubeadmconstants.KubeAPIServer, kubeadmconstants.KubeCertificatesEtcdVolumeName, fmt.Sprintf("%s-etcd", controlPlaneSecret), fmt.Sprintf("%s/etcd", cfg.CertificatesDir), true)
+
+	mounts.NewSecretMount(kubeadmconstants.KubeScheduler, kubeadmconstants.KubeConfigVolumeName, "cluster-sample-scheduler-kubeconfig", kubeadmconstants.KubernetesDir, true)
+
+	mounts.NewSecretMount(kubeadmconstants.KubeControllerManager, kubeadmconstants.KubeCertificatesVolumeName, controlPlaneSecret, cfg.CertificatesDir, true)
+	mounts.NewSecretMount(kubeadmconstants.KubeControllerManager, kubeadmconstants.KubeConfigVolumeName, "cluster-sample-controller-manager-kubeconfig", kubeadmconstants.KubernetesDir, true)
+
 	return mounts
 }
 func getHostPathVolumesForTheControlPlane(cfg *bootstrapv1.ClusterConfiguration) controlPlaneHostPathMounts {

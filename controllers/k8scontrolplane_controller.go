@@ -30,7 +30,11 @@ import (
 	"k8s.io/klog/v2"
 	infrav1 "sigs.k8s.io/cluster-api-provider-nested/api/infrastructure/v1beta1"
 	"sigs.k8s.io/cluster-api-provider-nested/pkg/scope"
+	"sigs.k8s.io/cluster-api-provider-nested/pkg/services/apiserver"
+	"sigs.k8s.io/cluster-api-provider-nested/pkg/services/controllermanager"
+	"sigs.k8s.io/cluster-api-provider-nested/pkg/services/scheduler"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/controllers/remote"
 	kcpv1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
@@ -58,6 +62,7 @@ import (
 // K8sControlPlaneReconciler reconciles a K8sControlPlane object.
 type K8sControlPlaneReconciler struct {
 	client.Client
+	Tracker                        *remote.ClusterCacheTracker
 	APIReader                      client.Reader
 	Log                            logr.Logger
 	WatchFilterValue               string
@@ -112,11 +117,18 @@ func (r *K8sControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return reconcile.Result{}, nil
 	}
 
+	remoteClient, err := r.Tracker.GetClient(ctx, util.ObjectKey(cluster))
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to create remote client: %w", err)
+	}
+
 	clusterScope, err := scope.NewControlPlaneScope(ctx, scope.ControlPlaneScopeParams{
-		Client:          r.Client,
+		ManagerClient:   r.Client,
+		ClusterClient:   remoteClient,
 		APIReader:       r.APIReader,
 		Logger:          log,
 		Cluster:         cluster,
+		Namespace:       "default",
 		K8sControlPlane: k8sControlPlane,
 	})
 	if err != nil {
@@ -145,9 +157,9 @@ func (r *K8sControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 }
 
 func (r *K8sControlPlaneReconciler) reconcileNormal(ctx context.Context, controlPlaneScope *scope.ControlPlaneScope) (ctrl.Result, error) {
-	k8sCluster := controlPlaneScope.K8sCluster
+	k8sControlPlane := controlPlaneScope.K8sControlPlane
 	// If the K8sCluster doesn't have our finalizer, add it.
-	controllerutil.AddFinalizer(k8sCluster, infrav1.ClusterFinalizer)
+	controllerutil.AddFinalizer(k8sControlPlane, infrav1.ClusterFinalizer)
 	if err := controlPlaneScope.PatchObject(ctx); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -174,6 +186,23 @@ func (r *K8sControlPlaneReconciler) reconcileNormal(ctx context.Context, control
 		return result, err
 	}
 
+	result, err := apiserver.NewApiServerService(controlPlaneScope).Reconcile(ctx)
+	if err != nil {
+		return result, fmt.Errorf("failed to reconcile server for K8sControlPlane api server %s/%s: %w",
+			controlPlaneScope.K8sControlPlane.Namespace, controlPlaneScope.K8sControlPlane.Name, err)
+	}
+
+	result, err = scheduler.NewControllerManagerService(controlPlaneScope).Reconcile(ctx)
+	if err != nil {
+		return result, fmt.Errorf("failed to reconcile server for K8sControlPlane scheduler %s/%s: %w",
+			controlPlaneScope.K8sControlPlane.Namespace, controlPlaneScope.K8sControlPlane.Name, err)
+	}
+
+	result, err = controllermanager.NewControllerManagerService(controlPlaneScope).Reconcile(ctx)
+	if err != nil {
+		return result, fmt.Errorf("failed to reconcile server for K8sControlPlane controller manager %s/%s: %w",
+			controlPlaneScope.K8sControlPlane.Namespace, controlPlaneScope.K8sControlPlane.Name, err)
+	}
 	// create service with load balancer
 	return reconcile.Result{}, nil
 }
@@ -227,7 +256,7 @@ func (r *K8sControlPlaneReconciler) reconcileKubeconfig(ctx context.Context, con
 }
 func (r *K8sControlPlaneReconciler) reconcileDelete(ctx context.Context, clusterScope *scope.ControlPlaneScope) (reconcile.Result, error) {
 	// Cluster is deleted so remove the finalizer.
-	controllerutil.RemoveFinalizer(clusterScope.K8sCluster, infrav1.ClusterFinalizer)
+	controllerutil.RemoveFinalizer(clusterScope.K8sControlPlane, infrav1.ClusterFinalizer)
 
 	return reconcile.Result{}, nil
 }

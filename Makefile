@@ -162,7 +162,6 @@ generate-go: $(CONTROLLER_GEN) ## Runs Go related generate targets
 	go generate ./...
 	$(MAKE) generate-go-infrastructure
 	$(MAKE) generate-go-controlplane
-	$(MAKE) generate-go-kubeadm
 
 .PHONY: generate-go-infrastructure
 generate-go-infrastructure: $(CONTROLLER_GEN)

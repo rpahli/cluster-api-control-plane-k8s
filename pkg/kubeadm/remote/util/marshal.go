@@ -12,7 +12,6 @@ import (
 	errorsutil "k8s.io/apimachinery/pkg/util/errors"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
-	kubeadmapi "sigs.k8s.io/cluster-api-provider-nested/pkg/kubeadm/api/v1beta3"
 	constants "sigs.k8s.io/cluster-api-provider-nested/pkg/kubeadm/remote"
 )
 
@@ -58,10 +57,14 @@ func UnmarshalFromYamlForCodecs(buffer []byte, gv schema.GroupVersion, codecs se
 	return obj, nil
 }
 
+// DocumentMap is a convenient way to describe a map between a YAML document and its GVK type
+// +k8s:deepcopy-gen=false
+type DocumentMap map[schema.GroupVersionKind][]byte
+
 // SplitYAMLDocuments reads the YAML bytes per-document, unmarshals the TypeMeta information from each document
 // and returns a map between the GroupVersionKind of the document and the document bytes
-func SplitYAMLDocuments(yamlBytes []byte) (kubeadmapi.DocumentMap, error) {
-	gvkmap := kubeadmapi.DocumentMap{}
+func SplitYAMLDocuments(yamlBytes []byte) (DocumentMap, error) {
+	gvkmap := DocumentMap{}
 	knownKinds := map[string]bool{}
 	errs := []error{}
 	buf := bytes.NewBuffer(yamlBytes)

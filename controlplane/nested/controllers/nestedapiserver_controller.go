@@ -112,7 +112,7 @@ func (r *NestedAPIServerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 				}
 			}
 			if err := r.createAPIServerClientCrts(ctx, cluster, &ncp, &nkas); err != nil {
-				log.Error(err, "fail to create K8sAPIServer Client Certs")
+				log.Error(err, "fail to create K8sAPIServer ManagerClient Certs")
 				return ctrl.Result{}, err
 			}
 

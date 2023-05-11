@@ -167,7 +167,7 @@ func main() {
 
 	/*
 		if err = (&controllers.NestedEtcdReconciler{
-			Client: mgr.GetClient(),
+			ManagerClient: mgr.GetClient(),
 			Log:    ctrl.Log.WithName("controllers").WithName("controlplane").WithName("NestedEtcd"),
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {

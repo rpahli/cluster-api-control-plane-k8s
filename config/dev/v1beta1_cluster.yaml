@@ -12,7 +12,7 @@ spec:
     #port: 6443
   controlPlaneRef:
     apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-    kind: KubeadmControlPlane
+    kind: K8sControlPlane
     name: sample-control-plane
     namespace: default
   infrastructureRef:

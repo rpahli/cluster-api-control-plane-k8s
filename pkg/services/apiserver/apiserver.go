@@ -1,4 +1,4 @@
-package server
+package apiserver
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	controlplanev1 "sigs.k8s.io/cluster-api-provider-nested/api/controlplane/v1beta1"
 	infrav1 "sigs.k8s.io/cluster-api-provider-nested/api/infrastructure/v1beta1"
-	controlplanev1 "sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/api/v1beta1"
 	"sigs.k8s.io/cluster-api-provider-nested/controlplane/nested/certificate"
 	kubeadmconstants "sigs.k8s.io/cluster-api-provider-nested/pkg/kubeadm/remote"
 	"sigs.k8s.io/cluster-api-provider-nested/pkg/kubeadm/remote/controlplane"
@@ -21,24 +21,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// Service defines struct with machine scope to reconcile HCloudMachines.
-type Service struct {
-	scope *scope.MachineScope
+// ApiServerService defines struct with machine scope to reconcile HCloudMachines.
+type ApiServerService struct {
+	scope *scope.ControlPlaneScope
 }
 
-// NewService outs a new service with machine scope.
-func NewService(scope *scope.MachineScope) *Service {
-	return &Service{
+// NewApiServerService outs a new service with machine scope.
+func NewApiServerService(scope *scope.ControlPlaneScope) *ApiServerService {
+	return &ApiServerService{
 		scope: scope,
 	}
 }
 
-type BaseUserData struct {
-	WriteFiles []bootstrapv1.File `yaml:"write_files"`
-}
-
 // Reconcile implements reconcilement of HCloudMachines.
-func (s *Service) Reconcile(ctx context.Context) (res reconcile.Result, err error) {
+func (s *ApiServerService) Reconcile(ctx context.Context) (res reconcile.Result, err error) {
 
 	err = s.createOrUpdateEtcdServerCertificates(ctx)
 	if err != nil {
@@ -53,34 +49,19 @@ func (s *Service) Reconcile(ctx context.Context) (res reconcile.Result, err erro
 		return res, err
 	}
 
-	machine, err := util.GetOwnerMachine(ctx, s.scope.Client, s.scope.K8sMachine.ObjectMeta)
-
-	namespaced := types.NamespacedName{Name: machine.Spec.Bootstrap.ConfigRef.Name, Namespace: machine.Spec.Bootstrap.ConfigRef.Namespace}
-	kubeadmConfig := &bootstrapv1.KubeadmConfig{}
-	err = s.scope.Client.Get(ctx, namespaced, kubeadmConfig)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	namespaced = types.NamespacedName{Name: *machine.Spec.Bootstrap.DataSecretName, Namespace: machine.Spec.Bootstrap.ConfigRef.Namespace}
-	k8sSecret := &corev1.Secret{}
-	err = s.scope.Client.Get(ctx, namespaced, k8sSecret)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	controlPlaneSecretName := fmt.Sprintf("%s-k8s", machine.Spec.Bootstrap.ConfigRef.Name)
-	kubeadmConfig.Spec.ClusterConfiguration.CertificatesDir = "/etc/kubernetes/pki"
-	kubeadmConfig.Spec.ClusterConfiguration.APIServer.ExtraArgs["etcd-servers"] = "https://pl-etcd:2379"
-	podSpecs := controlplane.GetStaticPodSpecs(kubeadmConfig.Spec.ClusterConfiguration, &bootstrapv1.APIEndpoint{
+	controlPlaneSecretName := fmt.Sprintf("%s-k8s", s.scope.Cluster.Name)
+	s.scope.K8sControlPlane.Spec.ClusterConfiguration.CertificatesDir = "/etc/kubernetes/pki"
+	s.scope.K8sControlPlane.Spec.ClusterConfiguration.APIServer.ExtraArgs["etcd-servers"] = "https://pl-etcd:2379"
+	podSpecs := controlplane.GetStaticPodSpecs(&s.scope.K8sControlPlane.Spec.ClusterConfiguration, &bootstrapv1.APIEndpoint{
 		AdvertiseAddress: "0.0.0.0",
 		BindPort:         6443,
 	}, controlPlaneSecretName)
 
 	kubeAPIServerPodSpec := podSpecs[kubeadmconstants.KubeAPIServer]
-	kubeAPIServerPodSpec.Name = machine.Spec.Bootstrap.ConfigRef.Name
+	kubeAPIServerPodSpec.Name = s.scope.K8sControlPlane.Name
 	kubeAPIServerPodSpec.Namespace = s.scope.Namespace
 
-	kubeAPIServerPodSpec.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(s.scope.K8sMachine, controlplanev1.GroupVersion.WithKind("K8sMachine"))})
+	kubeAPIServerPodSpec.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(s.scope.K8sControlPlane, controlplanev1.GroupVersion.WithKind("K8sMachine"))})
 	res, err = s.createPod(ctx, &kubeAPIServerPodSpec)
 	if err == nil {
 		return res, nil
@@ -89,7 +70,7 @@ func (s *Service) Reconcile(ctx context.Context) (res reconcile.Result, err erro
 }
 
 // Delete implements delete method of server.
-func (s *Service) Delete(ctx context.Context) (res reconcile.Result, err error) {
+func (s *ApiServerService) Delete(ctx context.Context) (res reconcile.Result, err error) {
 	return res, nil
 }
 
@@ -102,11 +83,11 @@ func getEtcdServers(name, namespace string, replicas int32) (etcdServers []strin
 	return etcdServers
 }
 
-func (s *Service) createOrUpdateEtcdServerCertificates(ctx context.Context) error {
+func (s *ApiServerService) createOrUpdateEtcdServerCertificates(ctx context.Context) error {
 	etcdSecretName := fmt.Sprintf("%s-etcd-server", s.scope.Cluster.Name)
 	namespaced := types.NamespacedName{Name: etcdSecretName, Namespace: s.scope.Namespace}
 	etcdSecret := &corev1.Secret{}
-	err := s.scope.Client.Get(ctx, namespaced, etcdSecret)
+	err := s.scope.ManagerClient.Get(ctx, namespaced, etcdSecret)
 	isNew := false
 	if err != nil {
 		// return error if error not equal not found
@@ -120,7 +101,7 @@ func (s *Service) createOrUpdateEtcdServerCertificates(ctx context.Context) erro
 		return nil
 	}
 	certificates := secret.NewCertificatesForInitialControlPlane(nil)
-	if err := certificates.Lookup(ctx, s.scope.Client, util.ObjectKey(s.scope.Cluster)); err != nil {
+	if err := certificates.Lookup(ctx, s.scope.ManagerClient, util.ObjectKey(s.scope.Cluster)); err != nil {
 		return err
 	}
 	etcdCert := certificates.GetByPurpose(secret.EtcdCA)
@@ -152,9 +133,9 @@ func (s *Service) createOrUpdateEtcdServerCertificates(ctx context.Context) erro
 		Type:       "",
 	}
 
-	controllerRef := metav1.NewControllerRef(s.scope.K8sMachine, controlplanev1.GroupVersion.WithKind("K8sMachine"))
-	sec := etcdKeyPair.AsSecret(util.ObjectKey(s.scope.K8sMachine), *controllerRef)
-	etcdSecret.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(s.scope.K8sMachine, controlplanev1.GroupVersion.WithKind("K8sMachine"))})
+	controllerRef := metav1.NewControllerRef(s.scope.K8sControlPlane, controlplanev1.GroupVersion.WithKind("K8sControlPlane"))
+	sec := etcdKeyPair.AsSecret(util.ObjectKey(s.scope.K8sControlPlane), *controllerRef)
+	etcdSecret.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(s.scope.K8sControlPlane, controlplanev1.GroupVersion.WithKind("K8sControlPlane"))})
 	etcdSecret.Data["ca.crt"] = etcdCert.KeyPair.Cert
 	etcdSecret.Data["peer-ca.crt"] = etcdCert.KeyPair.Cert
 	etcdSecret.Data["server-ca.crt"] = etcdCert.KeyPair.Cert
@@ -167,18 +148,18 @@ func (s *Service) createOrUpdateEtcdServerCertificates(ctx context.Context) erro
 	etcdSecret.Data["etcd-client.key"] = sec.Data[secret.TLSKeyDataName]
 	etcdSecret.Data["etcd-client.crt"] = sec.Data[secret.TLSCrtDataName]
 
-	err = s.scope.Client.Create(ctx, etcdSecret)
+	err = s.scope.ManagerClient.Create(ctx, etcdSecret)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Service) createOrUpdateApiServerEtcdCertificates(ctx context.Context) error {
-	controlPlaneEtcdSecretName := fmt.Sprintf("%s-k8s-etcd", s.scope.Machine.Spec.Bootstrap.ConfigRef.Name)
+func (s *ApiServerService) createOrUpdateApiServerEtcdCertificates(ctx context.Context) error {
+	controlPlaneEtcdSecretName := fmt.Sprintf("%s-k8s-etcd", s.scope.Cluster.Name)
 	namespaced := types.NamespacedName{Name: controlPlaneEtcdSecretName, Namespace: s.scope.Namespace}
 	etcdSecret := &corev1.Secret{}
-	err := s.scope.Client.Get(ctx, namespaced, etcdSecret)
+	err := s.scope.ManagerClient.Get(ctx, namespaced, etcdSecret)
 	isNew := false
 	if err != nil {
 		// return error if error not equal not found
@@ -192,7 +173,7 @@ func (s *Service) createOrUpdateApiServerEtcdCertificates(ctx context.Context) e
 		return nil
 	}
 	certificates := secret.NewCertificatesForInitialControlPlane(nil)
-	if err := certificates.Lookup(ctx, s.scope.Client, util.ObjectKey(s.scope.Cluster)); err != nil {
+	if err := certificates.Lookup(ctx, s.scope.ManagerClient, util.ObjectKey(s.scope.Cluster)); err != nil {
 		return err
 	}
 
@@ -227,27 +208,27 @@ func (s *Service) createOrUpdateApiServerEtcdCertificates(ctx context.Context) e
 		Type:       "",
 	}
 
-	controllerRef := metav1.NewControllerRef(s.scope.K8sMachine, controlplanev1.GroupVersion.WithKind("K8sMachine"))
-	etcdSecret = etcdKeyPair.AsSecret(util.ObjectKey(s.scope.K8sMachine), *controllerRef)
+	controllerRef := metav1.NewControllerRef(s.scope.K8sControlPlane, controlplanev1.GroupVersion.WithKind("K8sControlPlane"))
+	etcdSecret = etcdKeyPair.AsSecret(util.ObjectKey(s.scope.K8sControlPlane), *controllerRef)
 
 	apiServerEtcdSecret.Data["ca.crt"] = etcdCert.KeyPair.Cert
 	apiServerEtcdSecret.Data["ca.key"] = etcdCert.KeyPair.Key
 	apiServerEtcdSecret.Data["server.key"] = etcdSecret.Data[secret.TLSKeyDataName]
 	apiServerEtcdSecret.Data["server.crt"] = etcdSecret.Data[secret.TLSCrtDataName]
 
-	apiServerEtcdSecret.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(s.scope.K8sMachine, controlplanev1.GroupVersion.WithKind("K8sMachine"))})
-	err = s.scope.Client.Create(ctx, apiServerEtcdSecret)
+	apiServerEtcdSecret.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(s.scope.K8sControlPlane, controlplanev1.GroupVersion.WithKind("K8sControlPlane"))})
+	err = s.scope.ManagerClient.Create(ctx, apiServerEtcdSecret)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Service) createOrUpdateApiServerCertificates(ctx context.Context) error {
-	controlPlaneSecretName := fmt.Sprintf("%s-k8s", s.scope.Machine.Spec.Bootstrap.ConfigRef.Name)
+func (s *ApiServerService) createOrUpdateApiServerCertificates(ctx context.Context) error {
+	controlPlaneSecretName := fmt.Sprintf("%s-k8s", s.scope.Cluster.Name)
 	namespaced := types.NamespacedName{Name: controlPlaneSecretName, Namespace: s.scope.Namespace}
 	sec := &corev1.Secret{}
-	err := s.scope.Client.Get(ctx, namespaced, sec)
+	err := s.scope.ManagerClient.Get(ctx, namespaced, sec)
 	isNew := false
 	if err != nil {
 		// return error if error not equal not found
@@ -261,7 +242,7 @@ func (s *Service) createOrUpdateApiServerCertificates(ctx context.Context) error
 		return nil
 	}
 	certificates := secret.NewCertificatesForInitialControlPlane(nil)
-	if err := certificates.Lookup(ctx, s.scope.Client, util.ObjectKey(s.scope.Cluster)); err != nil {
+	if err := certificates.Lookup(ctx, s.scope.ManagerClient, util.ObjectKey(s.scope.Cluster)); err != nil {
 		return err
 	}
 	cacert := certificates.GetByPurpose(secret.ClusterCA)
@@ -341,11 +322,11 @@ func (s *Service) createOrUpdateApiServerCertificates(ctx context.Context) error
 		Type:       "",
 	}
 
-	controllerRef := metav1.NewControllerRef(s.scope.K8sMachine, controlplanev1.GroupVersion.WithKind("K8sMachine"))
-	apiSecret := apiKeyPair.AsSecret(util.ObjectKey(s.scope.K8sMachine), *controllerRef)
-	kubeletSecret := kubeletKeyPair.AsSecret(util.ObjectKey(s.scope.K8sMachine), *controllerRef)
-	frontProxySecret := frontProxyKeyPair.AsSecret(util.ObjectKey(s.scope.K8sMachine), *controllerRef)
-	etcdSecret := etcdKeyPair.AsSecret(util.ObjectKey(s.scope.K8sMachine), *controllerRef)
+	controllerRef := metav1.NewControllerRef(s.scope.K8sControlPlane, controlplanev1.GroupVersion.WithKind("K8sMachine"))
+	apiSecret := apiKeyPair.AsSecret(util.ObjectKey(s.scope.K8sControlPlane), *controllerRef)
+	kubeletSecret := kubeletKeyPair.AsSecret(util.ObjectKey(s.scope.K8sControlPlane), *controllerRef)
+	frontProxySecret := frontProxyKeyPair.AsSecret(util.ObjectKey(s.scope.K8sControlPlane), *controllerRef)
+	etcdSecret := etcdKeyPair.AsSecret(util.ObjectKey(s.scope.K8sControlPlane), *controllerRef)
 
 	apiServerSecret.Data["apiserver.key"] = apiSecret.Data[secret.TLSKeyDataName]
 	apiServerSecret.Data["apiserver.crt"] = apiSecret.Data[secret.TLSCrtDataName]
@@ -367,8 +348,8 @@ func (s *Service) createOrUpdateApiServerCertificates(ctx context.Context) error
 	apiServerSecret.Data["sa.key"] = serviceAccount.KeyPair.Key
 	apiServerSecret.Data["sa.pub"] = serviceAccount.KeyPair.Cert
 
-	apiServerSecret.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(s.scope.K8sMachine, controlplanev1.GroupVersion.WithKind("K8sMachine"))})
-	err = s.scope.Client.Create(ctx, apiServerSecret)
+	apiServerSecret.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(s.scope.K8sControlPlane, controlplanev1.GroupVersion.WithKind("K8sMachine"))})
+	err = s.scope.ManagerClient.Create(ctx, apiServerSecret)
 	if err != nil {
 		return err
 	}
@@ -376,9 +357,9 @@ func (s *Service) createOrUpdateApiServerCertificates(ctx context.Context) error
 	return nil
 }
 
-func (s *Service) createPod(ctx context.Context, pod *corev1.Pod) (res reconcile.Result, err error) {
+func (s *ApiServerService) createPod(ctx context.Context, pod *corev1.Pod) (res reconcile.Result, err error) {
 	s.scope.SetReady(true)
-	conditions.MarkTrue(s.scope.K8sMachine, infrav1.InstanceReadyCondition)
-	err = s.scope.Client.Create(ctx, pod)
+	conditions.MarkTrue(s.scope.K8sControlPlane, infrav1.InstanceReadyCondition)
+	err = s.scope.ManagerClient.Create(ctx, pod)
 	return res, err
 }

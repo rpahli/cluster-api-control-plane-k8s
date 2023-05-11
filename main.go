@@ -21,7 +21,9 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	controlplanev1 "sigs.k8s.io/cluster-api-provider-nested/api/controlplane/v1beta1"
 	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
+	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sync"
 	"time"
 
@@ -62,6 +64,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
 	utilruntime.Must(bootstrapv1.AddToScheme(scheme))
+	utilruntime.Must(controlplanev1.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
@@ -150,6 +153,26 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
+	log := ctrl.Log.WithName("remote").WithName("ClusterCacheTracker")
+	tracker, err := remote.NewClusterCacheTracker(
+		mgr,
+		remote.ClusterCacheTrackerOptions{
+			Log:     &log,
+			Indexes: remote.DefaultIndexes,
+		},
+	)
+	if err != nil {
+		setupLog.Error(err, "unable to create cluster cache tracker")
+		os.Exit(1)
+	}
+	if err := (&remote.ClusterCacheReconciler{
+		Client:  mgr.GetClient(),
+		Tracker: tracker,
+	}).SetupWithManager(ctx, mgr, concurrency(nestedclusterConcurrency)); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ClusterCacheReconciler")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.K8sClusterReconciler{
 		Client:                         mgr.GetClient(),
 		Log:                            ctrl.Log.WithName("controllers").WithName("infrastructure").WithName("K8sCluster"),
@@ -166,6 +189,7 @@ func main() {
 		Log:                            ctrl.Log.WithName("controllers").WithName("controlplane").WithName("K8sControlPlane"),
 		APIReader:                      mgr.GetAPIReader(),
 		Scheme:                         mgr.GetScheme(),
+		Tracker:                        tracker,
 		TargetClusterManagersWaitGroup: &wg,
 	}).SetupWithManager(ctx, mgr, concurrency(nestedclusterConcurrency)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "K8sControlPlane")

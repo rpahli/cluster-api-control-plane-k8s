@@ -8,7 +8,6 @@ import (
 	"net"
 	"path/filepath"
 	kubeadmconstants "sigs.k8s.io/cluster-api-provider-nested/pkg/kubeadm/remote"
-	certphase "sigs.k8s.io/cluster-api-provider-nested/pkg/kubeadm/remote/controlplane/certs"
 	kubeadmutil "sigs.k8s.io/cluster-api-provider-nested/pkg/kubeadm/remote/util"
 	"sigs.k8s.io/cluster-api-provider-nested/pkg/kubeadm/remote/util/images"
 	staticpodutil "sigs.k8s.io/cluster-api-provider-nested/pkg/kubeadm/remote/util/staticpod"
@@ -228,10 +227,6 @@ func getControllerManagerCommand(cfg *bootstrapv1.ClusterConfiguration) []string
 
 	// If using external CA, pass empty string to controller manager instead of ca.key/ca.crt path,
 	// so that the csrsigning controller fails to start
-	if res, _ := certphase.UsingExternalCA(cfg); res {
-		defaultArguments["cluster-signing-key-file"] = ""
-		defaultArguments["cluster-signing-cert-file"] = ""
-	}
 
 	// Let the controller-manager allocate Node CIDRs for the Pod network.
 	// Each node will get a subspace of the address CIDR provided with --pod-network-cidr.

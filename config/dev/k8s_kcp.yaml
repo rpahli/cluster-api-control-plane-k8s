@@ -4,6 +4,7 @@ metadata:
   name: "sample-control-plane"
 spec:
   clusterConfiguration:
+    kubernetesVersion: "v1.27.1"
     apiServer:
       extraArgs:
         # CA certificate for validating API clients.
@@ -41,10 +42,6 @@ spec:
         enable-bootstrap-token-auth: "true"
         default-not-ready-toleration-seconds: "45"
         default-unreachable-toleration-seconds: "45"
-      extraVolumes:
-        - name: encryption-provider
-          hostPath: /etc/kubernetes/encryption-provider.yaml
-          mountPath: /etc/kubernetes/encryption-provider.yaml
     controllerManager:
       extraArgs:
         cloud-provider: external
@@ -62,8 +59,6 @@ spec:
         authorization-kubeconfig: /etc/kubernetes/controller-manager.conf
         bind-address: "0.0.0.0"
         secure-port: "10257"
-        allocate-node-cidrs: "true"
-        pod-eviction-timeout: 2m
     scheduler:
       extraArgs:
         profiling: "false"

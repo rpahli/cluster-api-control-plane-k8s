@@ -20,13 +20,18 @@ type K8sControlPlanSpec struct {
 type K8sControlPlanStatus struct {
 	// Ready is when the NestedControlPlane has a API server URL.
 	// +optional
-	Ready      bool                 `json:"ready,omitempty"`
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Ready                       bool                 `json:"ready,omitempty"`
+	Initialized                 bool                 `json:"initialized,omitempty"`
+	Conditions                  clusterv1.Conditions `json:"conditions,omitempty"`
+	ExternalManagedControlPlane bool                 `json:"externalManagedControlPlane,omitempty"`
+	Version                     string               `json:"version,omitempty"`
 }
 
 //+kubebuilder:object:root=true
-//+kubebuilder:resource:path=k8scontrolplane,scope=Namespaced,shortName=nc,categories=capi;capn
+//+kubebuilder:resource:path=k8scontrolplanes,scope=Namespaced,shortName=nc,categories=capi;capn
 //+kubebuilder:printcolumn:name="Ready",type="boolean",JSONPath=".status.ready"
+//+kubebuilder:printcolumn:name="Initialized",type="boolean",JSONPath=".status.initialized"
+//+kubebuilder:printcolumn:name="Version",type="string",JSONPath=".metadata.spec.version"
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 //+kubebuilder:subresource:status
 // +kubebuilder:storageversion
@@ -42,8 +47,8 @@ type K8sControlPlane struct {
 
 //+kubebuilder:object:root=true
 
-// K8sControlPlanList contains a list of K8sControlPlane.
-type K8sControlPlanList struct {
+// K8sControlPlaneList contains a list of K8sControlPlane.
+type K8sControlPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []K8sControlPlane `json:"items"`
@@ -60,5 +65,5 @@ func (r *K8sControlPlane) SetConditions(conditions clusterv1.Conditions) {
 }
 
 func init() {
-	SchemeBuilder.Register(&K8sControlPlane{}, &K8sControlPlanList{})
+	SchemeBuilder.Register(&K8sControlPlane{}, &K8sControlPlaneList{})
 }

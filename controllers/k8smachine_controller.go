@@ -95,10 +95,10 @@ func (r *K8sMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	ctx = ctrl.LoggerInto(ctx, log)
 
 	// Create the scope.
-	// secretManager := secretutil.NewSecretManager(log, r.Client, r.APIReader)
+	// secretManager := secretutil.NewSecretManager(log, r.ManagerClient, r.APIReader)
 	/*	hcloudToken, hetznerSecret, err := getAndValidateHCloudToken(ctx, req.Namespace, k8sCluster, secretManager)
 		if err != nil {
-			return hcloudTokenErrorResult(ctx, err, k8sMachine, infrav1.InstanceReadyCondition, r.Client)
+			return hcloudTokenErrorResult(ctx, err, k8sMachine, infrav1.InstanceReadyCondition, r.ManagerClient)
 		}*/
 
 	// namespace := "default"

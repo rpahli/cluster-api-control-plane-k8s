@@ -5,7 +5,7 @@ resources:
 - bases/infrastructure.cluster.x-k8s.io_k8sclusters.yaml
 - bases/infrastructure.cluster.x-k8s.io_k8smachines.yaml
 - bases/infrastructure.cluster.x-k8s.io_k8smachinetemplates.yaml
-- bases/controlplane.cluster.x-k8s.io_k8scontrolplane.yaml
+- bases/controlplane.cluster.x-k8s.io_k8scontrolplanes.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
